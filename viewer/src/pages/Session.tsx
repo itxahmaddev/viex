@@ -52,7 +52,7 @@ export function Session() {
   }, []);
 
   if (!session) return null;
-  const { tiles, mode, focus, phase, device } = session;
+  const { tiles, mode, focus, phase, device, detail, noTurn } = session;
   const live = phase === "live" && tiles.length > 0;
 
   const go = (delta: number) => {
@@ -88,6 +88,12 @@ export function Session() {
                   ? "Someone at the PC may need to tap Accept."
                   : "Setting up a direct, encrypted connection."}
               </p>
+              {detail && phase !== "requesting" && <p className="mt-2 font-mono text-[11.5px] text-white/50">{detail}</p>}
+              {noTurn && phase === "connecting" && (
+                <p className="mt-2 text-[11.5px] leading-4 text-white/45">
+                  No TURN relay is configured, so this only works when both networks allow direct connections.
+                </p>
+              )}
             </div>
             <Button variant="secondary" onClick={() => viewer.leave()}>
               Cancel

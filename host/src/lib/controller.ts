@@ -3,6 +3,7 @@ import { disable, enable } from "@tauri-apps/plugin-autostart";
 import {
   RelayClient,
   authenticate,
+  hasTurn,
   normalizeServerUrl,
   parseIceServers,
   resolveIceServers,
@@ -91,6 +92,7 @@ class HostController {
   private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private monitorTimer: ReturnType<typeof setInterval> | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectTimer: ReturnType<typeof setTimeout> | null = null;
 
   /* ---------- store ---------- */
 
@@ -290,6 +292,11 @@ class HostController {
 
   /* ---------- streaming ---------- */
 
+  /** The ICE list a session would use right now (shown on the Network page). */
+  currentIceServers() {
+    return this.iceServers();
+  }
+
   private iceServers() {
     return resolveIceServers(parseIceServers(this.state.config?.custom_ice ?? ""), this.relay?.iceServers ?? null);
   }
@@ -309,8 +316,20 @@ class HostController {
       // The indicator comes up BEFORE any pixel leaves the machine, in every permission mode.
       await invoke("set_live", { live: true, viewer: req.viewer_name, screens: monitors.length });
 
-      const pc = new RTCPeerConnection({ iceServers: this.iceServers() });
+      const ice = this.iceServers();
+      const pc = new RTCPeerConnection({ iceServers: ice });
       this.pc = pc;
+      if (this.connectTimer) clearTimeout(this.connectTimer);
+      this.connectTimer = setTimeout(() => {
+        if (this.state.session?.phase === "connecting") {
+          this.toast(
+            hasTurn(ice)
+              ? "The viewer could not connect. Ask it to try again."
+              : "The viewer could not connect directly. These networks need a TURN relay — see Network.",
+          );
+          this.endSession("timeout");
+        }
+      }, 35_000);
       this.queuedCandidates = [];
 
       const meta = pc.createDataChannel("meta", { negotiated: true, id: 0 });
@@ -464,6 +483,7 @@ class HostController {
     if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
     switch (pc.connectionState) {
       case "connected": {
+        if (this.connectTimer) clearTimeout(this.connectTimer);
         const session = this.state.session;
         if (session) this.set({ session: { ...session, phase: "live" } });
         break;
@@ -485,6 +505,8 @@ class HostController {
     const session = this.state.session;
     if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
     this.disconnectTimer = null;
+    if (this.connectTimer) clearTimeout(this.connectTimer);
+    this.connectTimer = null;
     if (!session && !this.pc) return;
 
     if (session && notifyRelay) this.relay?.send({ type: "session-end", session_id: session.session_id });

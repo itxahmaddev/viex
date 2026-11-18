@@ -3,6 +3,7 @@ import {
   authenticate,
   newId,
   normalizeServerUrl,
+  hasTurn,
   parseIceServers,
   resolveIceServers,
   type DeviceInfo,
@@ -40,6 +41,10 @@ export interface SessionState {
   tiles: Tile[];
   mode: "grid" | "single";
   focus: number; // index into tiles
+  /** Human-readable connection progress, shown while connecting. */
+  detail: string | null;
+  /** True when no TURN server is configured (direct connections only). */
+  noTurn: boolean;
 }
 
 export interface ViewerState {
@@ -109,6 +114,7 @@ class ViewerController {
   private metaOrder: MetaMonitor[] = [];
   private queuedCandidates: RTCIceCandidateInit[] = [];
   private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectTimer: ReturnType<typeof setTimeout> | null = null;
 
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -249,7 +255,7 @@ class ViewerController {
     if (this.state.session || !this.relay?.isOpen) return;
     this.set({ notice: null });
     this.metaOrder = [];
-    this.set({ session: { phase: "requesting", device, session_id: null, tiles: [], mode: "grid", focus: 0 } });
+    this.set({ session: { phase: "requesting", device, session_id: null, tiles: [], mode: "grid", focus: 0, detail: null, noTurn: false } });
     this.relay.send({ type: "connect-request", target: device.device_id });
   }
 
@@ -257,6 +263,21 @@ class ViewerController {
     const ice = resolveIceServers(parseIceServers(this.state.config?.custom_ice ?? ""), this.relay?.iceServers ?? null);
     const pc = new RTCPeerConnection({ iceServers: ice });
     this.pc = pc;
+    const turn = hasTurn(ice);
+    this.setSession({ noTurn: !turn, detail: "Negotiating…" });
+    if (this.connectTimer) clearTimeout(this.connectTimer);
+    this.connectTimer = setTimeout(() => {
+      const current = this.state.session;
+      if (!current || current.phase === "live") return;
+      this.teardown(
+        turn
+          ? "Could not connect to that PC. Check that its VIEX Host is running and online, then try again."
+          : "Could not connect directly to that PC. Your networks (for example mobile data) need a TURN relay — set one on your Relay or in Settings (see the setup guide).",
+      );
+    }, 30_000);
+    pc.oniceconnectionstatechange = () => {
+      if (this.pc === pc) this.setSession({ detail: `Connection: ${pc.iceConnectionState}` });
+    };
     this.queuedCandidates = [];
 
     const meta = pc.createDataChannel("meta", { negotiated: true, id: 0 });
@@ -280,7 +301,10 @@ class ViewerController {
     pc.onconnectionstatechange = () => {
       if (this.pc !== pc) return;
       if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
-      if (pc.connectionState === "connected") this.setSession({ phase: "live" });
+      if (pc.connectionState === "connected") {
+        if (this.connectTimer) clearTimeout(this.connectTimer);
+        this.setSession({ phase: "live", detail: "Connected — waiting for video…" });
+      }
       else if (pc.connectionState === "disconnected")
         this.disconnectTimer = setTimeout(() => this.teardown("The connection dropped."), 10_000);
       else if (pc.connectionState === "failed" || pc.connectionState === "closed")
@@ -357,6 +381,8 @@ class ViewerController {
     const session = this.state.session;
     if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
     this.disconnectTimer = null;
+    if (this.connectTimer) clearTimeout(this.connectTimer);
+    this.connectTimer = null;
     if (session?.session_id && notifyRelay) this.relay?.send({ type: "session-end", session_id: session.session_id });
     this.meta?.close();
     this.meta = null;

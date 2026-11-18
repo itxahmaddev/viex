@@ -6,6 +6,7 @@ import { WebSocketServer } from "ws";
 import { Auth } from "./auth.js";
 import { Registry } from "./registry.js";
 import { attachSignaling } from "./signaling.js";
+import { createIceProvider } from "./ice.js";
 import { CORS_HEADERS, handleHealth, readJsonBody, sendJson } from "./health.js";
 
 const MIME = {
@@ -102,14 +103,8 @@ function main() {
     process.exit(1);
   }
 
-  let iceServers = null;
-  if (process.env.VIEX_ICE_SERVERS) {
-    try {
-      iceServers = JSON.parse(process.env.VIEX_ICE_SERVERS);
-    } catch {
-      console.error("[viex-relay] VIEX_ICE_SERVERS is not valid JSON; ignoring it.");
-    }
-  }
+  const iceServers = createIceProvider(process.env, (line) => console.error(`[viex-relay] ${line}`));
+  console.log(`[viex-relay] ICE servers handed to clients: ${iceServers ? "custom (TURN configured)" : "none — clients use built-in STUN only"}`);
 
   const here = fileURLToPath(new URL(".", import.meta.url));
   const defaultViewerDir = resolve(here, "../public");

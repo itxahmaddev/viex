@@ -35,7 +35,7 @@ Video flows **peer-to-peer** over WebRTC (DTLS-SRTP encrypted). Your free server
 - ⚡ **Zero-click Host** — starts hidden with the OS and announces itself online. No manual steps after first-run setup.
 - 🔐 **Password-gated** — `VIEX_PASSWORD` is set on your Relay at deploy time; nobody without it can even see the device list.
 - 🛡️ **Permission modes** — *Ask* (default), *Auto-Approve* (per trusted viewer), *Quiet Mode* (no popup — indicator stays). Stored only on the PC.
-- 🌐 **Configurable STUN/TURN** — free working defaults, fully editable in Settings (or set once on the Relay).
+- 🌐 **Configurable STUN/TURN** — public STUN built in; set a TURN relay once on the Relay (Metered / Cloudflare / coturn) for mobile data.
 - 💸 **$0/month** for personal use. 100 % open source (MIT).
 
 ## Quick start (about 10 minutes)

@@ -122,8 +122,10 @@ fn urlencode(text: &str) -> String {
         .collect()
 }
 
+/// `async` on purpose: building a window from a synchronous command runs on the main thread and
+/// deadlocks the app on Windows (WebView2). Async commands run on a worker thread, which is safe.
 #[tauri::command]
-pub fn set_live(app: AppHandle, live: bool, viewer: String, screens: u32) -> Result<(), String> {
+pub async fn set_live(app: AppHandle, live: bool, viewer: String, screens: u32) -> Result<(), String> {
     LIVE.store(live, Ordering::SeqCst);
     let tray = app.tray_by_id(TRAY_ID);
 
@@ -144,10 +146,9 @@ pub fn set_live(app: AppHandle, live: bool, viewer: String, screens: u32) -> Res
             thread::spawn(move || {
                 while LIVE.load(Ordering::SeqCst) {
                     thread::sleep(Duration::from_secs(2));
+                    // Called from this worker thread (never the main thread) so window creation can't deadlock.
                     if LIVE.load(Ordering::SeqCst) && handle.get_webview_window(INDICATOR_LABEL).is_none() {
-                        let h = handle.clone();
-                        let t = text.clone();
-                        let _ = handle.run_on_main_thread(move || open_indicator(&h, &t));
+                        open_indicator(&handle, &text);
                     }
                 }
                 WATCHDOG_RUNNING.store(false, Ordering::SeqCst);

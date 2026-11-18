@@ -178,3 +178,43 @@ test("host going offline ends the session and updates the list", async () => {
   assert.equal(ended.reason, "host-offline");
   viewer.close();
 });
+
+test("ICE provider builds STUN+TURN from env and the relay hands it to clients", async () => {
+  const { createIceProvider } = await import("../src/ice.js");
+  assert.equal(createIceProvider({}), null);
+  const provider = createIceProvider({
+    VIEX_TURN_URL: "turn:turn.example.com:3478, turns:turn.example.com:443?transport=tcp",
+    VIEX_TURN_USERNAME: "u",
+    VIEX_TURN_CREDENTIAL: "p",
+  });
+  const list = await provider();
+  assert.equal(list[0].urls, "stun:stun.l.google.com:19302");
+  assert.deepEqual(list[1].urls, ["turn:turn.example.com:3478", "turns:turn.example.com:443?transport=tcp"]);
+  assert.equal(list[1].username, "u");
+
+  // a relay configured with a provider function sends the resolved list in `welcome`
+  const custom = createRelay({ password: PASSWORD, quiet: true, iceServers: async () => list });
+  await new Promise((resolve) => custom.server.listen(0, "127.0.0.1", resolve));
+  const port = custom.server.address().port;
+  const res = await fetch(`http://127.0.0.1:${port}/auth`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ password: PASSWORD }),
+  });
+  const { token } = await res.json();
+  const welcome = await new Promise((resolve, reject) => {
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+    ws.on("open", () => ws.send(JSON.stringify({ type: "hello", role: "viewer", token, viewer_id: "ice-v" })));
+    ws.on("message", (raw) => {
+      const msg = JSON.parse(raw.toString());
+      if (msg.type === "welcome") {
+        ws.close();
+        resolve(msg);
+      }
+    });
+    ws.on("error", reject);
+  });
+  assert.equal(welcome.ice_servers[1].username, "u");
+  for (const client of custom.wss.clients) client.terminate();
+  custom.server.close();
+});

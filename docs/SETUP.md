@@ -58,6 +58,9 @@ You need a place to run a small Node server. **Render's free tier** is the easie
 |---|---|
 | `VIEX_PASSWORD` | **Required.** The shared password (8+ characters). |
 | `VIEX_ICE_SERVERS` | JSON array of STUN/TURN servers handed to every Host/Viewer. Example: `[{"urls":"turn:turn.example.com:3478","username":"u","credential":"p"}]` |
+| `VIEX_TURN_URL` / `_USERNAME` / `_CREDENTIAL` | Shortcut for a single coturn server. |
+| `METERED_DOMAIN` + `METERED_API_KEY` | Free TURN from metered.ca — see [STUN / TURN](#stun--turn). |
+| `CLOUDFLARE_TURN_KEY_ID` + `CLOUDFLARE_TURN_API_TOKEN` | Cloudflare Realtime TURN. |
 | `PORT` | Listen port (Render sets this automatically). Default `8787`. |
 | `VIEX_VIEWER_DIR` | Folder with the web viewer build to serve at `/`. Included in the Docker image and release zip. |
 | `VIEX_TRUST_PROXY` | `1` to trust `X-Forwarded-For` for per-IP rate limiting (automatic on Render). |
@@ -146,17 +149,24 @@ In **all** modes, while a viewer is connected the Host shows an always-on-top "V
 
 ## STUN / TURN
 
-Most connections go **directly** (STUN). On strict networks (some mobile carriers, corporate Wi-Fi) a **TURN** relay is needed. VIEX ships with free defaults:
+VIEX connects your PC and phone **directly** whenever the networks allow it, using free public **STUN** (built in). That works on most home Wi-Fi. It does **not** work when a side is behind strict or carrier NAT — typically a **phone on mobile data** — and then the screen sits on "Connecting…" until it times out (30 s) with a message. To cover those cases you need a **TURN relay**.
 
-- STUN: `stun:stun.l.google.com:19302`
-- TURN: OpenRelay (`openrelay.metered.ca`), shared and rate-limited
+> VIEX no longer ships a default TURN: the old free public one (OpenRelay) is gone, and no free TURN works without an account. Set one up once on your **Relay** and every Host and Viewer picks it up automatically.
 
-To use your own (recommended for reliability), either:
+Pick one (all free for personal use), then set the variables in the Render dashboard → **Environment** and let it redeploy:
 
-- set **`VIEX_ICE_SERVERS`** on the Relay once — every Host and Viewer picks it up, **or**
-- paste a JSON array in **Network** (Host) / **Settings** (Viewer) on each device. A device's own list takes priority over the Relay's, which takes priority over the defaults.
+| Option | Variables on the Relay |
+|---|---|
+| **Metered** (free plan, signup) — create an app at <https://www.metered.ca>, copy the app name and API key | `METERED_DOMAIN` = `yourapp.metered.live`, `METERED_API_KEY` = your key |
+| **Cloudflare Realtime TURN** (free tier) — create a TURN key in the Cloudflare dashboard | `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` |
+| **Your own coturn** on a small VPS | `VIEX_TURN_URL` = `turn:your.host:3478,turns:your.host:443?transport=tcp`, `VIEX_TURN_USERNAME`, `VIEX_TURN_CREDENTIAL` |
+| **Anything else** | `VIEX_ICE_SERVERS` = a JSON array (see below) |
 
-Example list:
+> The Metered and Cloudflare integrations fetch credentials from those services' APIs and cache them; they have not been verified against live accounts in this repo's tests — if a fetch fails, the Relay logs `Metered/Cloudflare TURN fetch failed` and falls back to STUN.
+
+You can also paste a list on one device only: **Network** (Host) or **Settings** (Viewer). A device's own list beats the Relay's, which beats the built-in STUN defaults. The Host's **Network** page shows whether a TURN relay is configured.
+
+Example list for `VIEX_ICE_SERVERS` or the Settings box:
 
 ```json
 [
@@ -164,8 +174,6 @@ Example list:
   { "urls": "turn:turn.example.com:3478", "username": "viex", "credential": "secret" }
 ]
 ```
-
-A quick way to run your own TURN is [coturn](https://github.com/coturn/coturn) on any small VPS.
 
 ---
 
@@ -251,7 +259,7 @@ Fork the repo and every push to `main` builds and publishes a release in **your*
 | Host shows "Offline" / "Connecting…" | Relay is asleep (add the pinger from Step 2) or the URL changed. It retries automatically. |
 | PC doesn't appear in the Viewer | The Host must be running (tray icon) and signed in to the **same server** with the same password. |
 | "Waiting for…" never resolves | Someone must press **Accept** on the PC, or the viewer must already be trusted. Requests time out after 60 s. |
-| Connects but no video / "connection failed" | A direct connection isn't possible on this network — configure a TURN server (see [STUN / TURN](#stun--turn)). |
+| Stuck on "Connecting…", then "Could not connect directly" | A direct connection isn't possible between these two networks (usually phone on mobile data). Configure a TURN relay on your Relay — see [STUN / TURN](#stun--turn). Test with the phone on the same Wi-Fi as the PC first. |
 | "That device already has a viewer" | Version 1 allows one viewer per PC at a time. |
 | Black tile for one monitor | The monitor may be asleep or locked. Wake it; capture resumes automatically. |
 | SmartScreen warning | Expected for unsigned open-source builds → **More info → Run anyway**. |

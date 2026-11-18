@@ -15,3 +15,8 @@ services:
       # Optional: JSON array of STUN/TURN servers handed to every Host/Viewer.
       # - key: VIEX_ICE_SERVERS
       #   sync: false
+      # Optional TURN (needed for phones on mobile data / strict NAT) — see docs/SETUP.md#stun--turn
+      # - key: METERED_DOMAIN
+      #   sync: false
+      # - key: METERED_API_KEY
+      #   sync: false

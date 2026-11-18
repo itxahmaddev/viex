@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Button, Card, DEFAULT_ICE_SERVERS, Notice, PageHeader, SettingRow, TextArea, parseIceServers } from "@viex/shared";
+import { Button, Card, DEFAULT_ICE_SERVERS, Notice, PageHeader, SettingRow, TextArea, hasTurn, parseIceServers } from "@viex/shared";
 import { host } from "../lib/controller";
 import { useHost } from "../lib/useHost";
 
 export function Network() {
-  const { config } = useHost();
+  const { config, relay } = useHost(); // re-renders when the relay (and its ICE list) comes online
+  const turnReady = hasTurn(host.currentIceServers());
   const saved = config?.custom_ice ?? "";
   const [text, setText] = useState(saved);
   const [justSaved, setJustSaved] = useState(false);
@@ -67,10 +68,17 @@ export function Network() {
       </div>
 
       <div className="mt-6">
-        <Notice tone="warn" title="About the free TURN default">
-          The built-in OpenRelay TURN is shared and rate-limited. Most sessions connect directly and never use it, but for
-          reliability on strict networks run your own coturn and paste it above.
-        </Notice>
+        {turnReady ? (
+          <Notice tone="ok" title="TURN relay configured">
+            Connections that can’t go direct (mobile data, strict NAT) fall back to your TURN server.
+          </Notice>
+        ) : (
+          <Notice tone="warn" title="No TURN relay configured">
+            Only direct connections will work. That is fine on most home Wi-Fi, but a phone on mobile data usually needs TURN.
+            Set one on your Relay once (every device picks it up) or paste it above — see the setup guide.
+            {relay === "online" ? "" : " Connect to your Relay first so its settings can load."}
+          </Notice>
+        )}
       </div>
     </>
   );

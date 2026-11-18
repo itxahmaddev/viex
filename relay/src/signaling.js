@@ -69,14 +69,14 @@ export function attachSignaling(wss, { auth, registry, iceServers = null, log = 
       }
       if (!msg || typeof msg.type !== "string") return socket.close(CLOSE.BAD_REQUEST, "invalid message");
 
-      if (msg.type === "hello") return handleHello(msg);
+      if (msg.type === "hello") return void handleHello(msg);
       if (!ctx.authed) return socket.close(CLOSE.UNAUTHORIZED, "hello first");
 
       if (ctx.role === "host") handleHost(msg);
       else handleViewer(msg);
     });
 
-    function handleHello(msg) {
+    async function handleHello(msg) {
       if (ctx.authed) return;
       if (!auth.verifyToken(msg.token)) return socket.close(CLOSE.UNAUTHORIZED, "invalid token");
 
@@ -109,7 +109,13 @@ export function attachSignaling(wss, { auth, registry, iceServers = null, log = 
 
       ctx.authed = true;
       clearTimeout(helloTimer);
-      send(socket, { type: "welcome", role: ctx.role, ice_servers: iceServers });
+      let ice = null;
+      try {
+        ice = typeof iceServers === "function" ? await iceServers() : iceServers;
+      } catch (error) {
+        log(`could not load ICE servers: ${error.message}`);
+      }
+      send(socket, { type: "welcome", role: ctx.role, ice_servers: ice });
       if (ctx.role === "viewer") send(socket, { type: "device-list", devices: registry.listDevices() });
       broadcastDevices();
     }
