@@ -1,0 +1,17 @@
+# One-click deploy: https://render.com/deploy?repo=https://github.com/itxahmaddev/viex
+# Render will ask you for VIEX_PASSWORD (it is never stored in git).
+services:
+  - type: web
+    name: viex-relay
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: VIEX_PASSWORD
+        sync: false # you enter this in the Render dashboard
+      # Optional: JSON array of STUN/TURN servers handed to every Host/Viewer.
+      # - key: VIEX_ICE_SERVERS
+      #   sync: false

@@ -1,0 +1,26 @@
+{
+  "name": "viex",
+  "private": true,
+  "version": "0.1.0",
+  "description": "VIEX — open-source, self-hosted, view-only remote screen viewer.",
+  "license": "MIT",
+  "workspaces": [
+    "relay",
+    "shared",
+    "host",
+    "viewer"
+  ],
+  "scripts": {
+    "relay": "npm run start -w relay",
+    "relay:test": "npm test -w relay",
+    "host:dev": "npm run tauri dev -w host",
+    "host:build": "npm run tauri build -w host",
+    "viewer:dev": "npm run dev -w viewer",
+    "viewer:build": "npm run build -w viewer",
+    "typecheck": "npm run typecheck -w shared -w host -w viewer",
+    "test": "npm run relay:test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

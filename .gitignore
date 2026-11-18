@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+
+# Tauri / Rust
+host/src-tauri/target/
+host/src-tauri/gen/
+
+# Android / Capacitor (regenerated in CI by `npx cap add android`)
+viewer/android/
+viewer/.gradle/
+*.jks
+!viewer/signing/viex-community.jks
+local.properties

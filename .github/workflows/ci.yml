@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main] # pushes to main are covered by the Build & Release workflow
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: Relay tests, typecheck, builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build -w viewer
+      - run: npm run build -w host
+
+  rust:
+    name: Host (Rust) check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: host/src-tauri
+      - run: npm ci
+      - run: npm run build -w host # produces host/dist, which tauri's build script embeds
+      - run: cargo check --manifest-path host/src-tauri/Cargo.toml

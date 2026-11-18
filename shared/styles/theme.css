@@ -1,0 +1,116 @@
+/* VIEX colors — the Yap/Devigner look: cool near-black and paper, one blue
+ * primary, status colors only for state. Every color the apps use comes from
+ * here. Each themed color is defined once as a light/dark pair.
+ */
+
+:root {
+  --light-color-text: #111419;
+  --light-color-background: #f6f7f9;
+  --light-color-surface: #fcfcfe;
+  --light-color-logo-primary: #111419;
+  --dark-color-text: #eff0f2;
+  --dark-color-background: #101215;
+  --dark-color-surface: #15171b;
+  --dark-color-logo-primary: #eff0f2;
+
+  --light-color-on-accent: #f8fafd;
+  --dark-color-on-accent: #070b14;
+  --light-color-primary: #275de5;
+  --dark-color-primary: #5a94ff;
+
+  --light-color-muted: #e7e9ed;
+  --dark-color-muted: #181b1e;
+  --light-color-hover: #e4e7eb;
+  --dark-color-hover: #1a1c20;
+  --light-color-canvas: #eceef1;
+  --dark-color-canvas: #0a0c0e;
+
+  --light-color-warning: #d97706;
+  --dark-color-warning: #fbbf24;
+  --light-color-error: #dc2626;
+  --dark-color-error: #f87171;
+  --light-color-moss: #2f7d5b;
+  --dark-color-moss: #86c9a4;
+
+  --light-color-mid-gray: #66696f;
+  --dark-color-mid-gray: #83868c;
+
+  /* Active palette — light by default, follows the OS, or is forced by data-theme. */
+  --color-text: var(--light-color-text);
+  --color-background: var(--light-color-background);
+  --color-surface: var(--light-color-surface);
+  --color-logo-primary: var(--light-color-logo-primary);
+  --color-on-accent: var(--light-color-on-accent);
+  --color-primary: var(--light-color-primary);
+  --color-canvas: var(--light-color-canvas);
+  --color-muted: var(--light-color-muted);
+  --color-hover: var(--light-color-hover);
+  --color-mid-gray: var(--light-color-mid-gray);
+  --color-warning: var(--light-color-warning);
+  --color-error: var(--light-color-error);
+  --color-moss: var(--light-color-moss);
+
+  --color-moss-wash: color-mix(in srgb, var(--color-moss) 12%, var(--color-background));
+  --color-warning-wash: color-mix(in srgb, var(--color-warning) 12%, var(--color-background));
+  --color-error-wash: color-mix(in srgb, var(--color-error) 12%, var(--color-background));
+
+  --color-ink-2: color-mix(in srgb, var(--color-text) 60%, transparent);
+  --color-ink-3: var(--color-mid-gray);
+  --color-line-strong: color-mix(in srgb, var(--color-text) 18%, transparent);
+  --color-line: color-mix(in srgb, var(--color-text) 9%, transparent);
+  --color-wash: color-mix(in srgb, var(--color-text) 5%, transparent);
+  --color-primary-soft: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  --color-primary-soft-hover: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  --shadow-rest: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 1px rgb(16 24 40 / 0.02);
+  --shadow-lift: 0 12px 28px -14px rgb(16 24 40 / 0.22), 0 2px 6px -2px rgb(16 24 40 / 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text: var(--dark-color-text);
+    --color-background: var(--dark-color-background);
+    --color-surface: var(--dark-color-surface);
+    --color-logo-primary: var(--dark-color-logo-primary);
+    --color-on-accent: var(--dark-color-on-accent);
+    --color-primary: var(--dark-color-primary);
+    --color-canvas: var(--dark-color-canvas);
+    --color-muted: var(--dark-color-muted);
+    --color-hover: var(--dark-color-hover);
+    --color-mid-gray: var(--dark-color-mid-gray);
+    --color-warning: var(--dark-color-warning);
+    --color-error: var(--dark-color-error);
+    --color-moss: var(--dark-color-moss);
+  }
+}
+
+:root[data-theme="light"] {
+  --color-text: var(--light-color-text);
+  --color-background: var(--light-color-background);
+  --color-surface: var(--light-color-surface);
+  --color-logo-primary: var(--light-color-logo-primary);
+  --color-on-accent: var(--light-color-on-accent);
+  --color-primary: var(--light-color-primary);
+  --color-canvas: var(--light-color-canvas);
+  --color-muted: var(--light-color-muted);
+  --color-hover: var(--light-color-hover);
+  --color-mid-gray: var(--light-color-mid-gray);
+  --color-warning: var(--light-color-warning);
+  --color-error: var(--light-color-error);
+  --color-moss: var(--light-color-moss);
+}
+
+:root[data-theme="dark"] {
+  --color-text: var(--dark-color-text);
+  --color-background: var(--dark-color-background);
+  --color-surface: var(--dark-color-surface);
+  --color-logo-primary: var(--dark-color-logo-primary);
+  --color-on-accent: var(--dark-color-on-accent);
+  --color-primary: var(--dark-color-primary);
+  --color-canvas: var(--dark-color-canvas);
+  --color-muted: var(--dark-color-muted);
+  --color-hover: var(--dark-color-hover);
+  --color-mid-gray: var(--dark-color-mid-gray);
+  --color-warning: var(--dark-color-warning);
+  --color-error: var(--dark-color-error);
+  --color-moss: var(--dark-color-moss);
+}

@@ -1,0 +1,16 @@
+@import "tailwindcss" source(".");
+@source "../../shared/src";
+@import "../../shared/styles/base.css";
+
+/* Touch-first: no tap flash, no text-size surprises, safe areas for notches and gesture bars. */
+:root {
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+host/src-tauri/target
+viewer/android
+website
+docs
+.git
+.github
+*.md

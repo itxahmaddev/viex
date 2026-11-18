@@ -1,0 +1,192 @@
+/* Shared base for every VIEX app window. Import AFTER `@import "tailwindcss"`. */
+@import "./theme.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+/* `dark:` follows the theme setting: forced dark, or the OS when unset. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
+@theme inline {
+  --color-text: var(--color-text);
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-on-accent: var(--color-on-accent);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+  --color-moss: var(--color-moss);
+  --color-wash: var(--color-wash);
+  --color-moss-wash: var(--color-moss-wash);
+  --color-warning-wash: var(--color-warning-wash);
+  --color-error-wash: var(--color-error-wash);
+  --color-ink-2: var(--color-ink-2);
+  --color-ink-3: var(--color-ink-3);
+  --color-line: var(--color-line);
+  --color-line-strong: var(--color-line-strong);
+  --color-primary: var(--color-primary);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-primary-soft-hover: var(--color-primary-soft-hover);
+  --color-canvas: var(--color-canvas);
+  --color-muted: var(--color-muted);
+  --color-hover: var(--color-hover);
+  --shadow-rest: var(--shadow-rest);
+  --shadow-lift: var(--shadow-lift);
+
+  /* shadcn-style aliases used by the shared components */
+  --color-foreground: var(--color-text);
+  --color-popover: var(--color-surface);
+  --color-secondary: var(--color-muted);
+  --color-muted-foreground: var(--color-ink-3);
+  --color-accent: var(--color-hover);
+  --color-primary-foreground: var(--color-on-accent);
+  --color-destructive: var(--color-error);
+  --color-border: var(--color-line);
+  --color-input: var(--color-line-strong);
+  --color-ring: var(--color-primary);
+}
+
+@theme {
+  --font-sans: "Geist Variable", system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --text-title: 26px;
+  --text-body: 15px;
+  --text-small: 13px;
+  --text-label: 12px;
+  --text-tag: 11px;
+
+  --radius-panel: 16px;
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --radius-chip: 6px;
+
+  --ease-glide: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --shadow-pop: 0 16px 36px -12px rgb(16 24 40 / 0.22), 0 2px 6px rgb(16 24 40 / 0.06);
+
+  --animate-rise: rise 260ms var(--ease-glide);
+  --animate-pop: pop 320ms var(--ease-spring) both;
+  --animate-drop: drop 160ms var(--ease-glide);
+  --animate-fade: fade 180ms ease-out;
+  --animate-live: live 1.6s ease-in-out infinite;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      translate: 0 6px;
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      scale: 0.94;
+      translate: 0 8px;
+    }
+  }
+  @keyframes drop {
+    from {
+      opacity: 0;
+      translate: 0 -4px;
+      scale: 0.97;
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes live {
+    50% {
+      opacity: 0.35;
+    }
+  }
+}
+
+:root {
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: 400;
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  --scrollbar-thumb: color-mix(in srgb, var(--color-text), transparent 85%);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--color-text), transparent 70%);
+  color: var(--color-text);
+  background-color: var(--color-background);
+  color-scheme: light dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-canvas);
+  overflow: hidden;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 20px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  min-height: 32px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  color: var(--color-text);
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
+  outline-offset: 2px;
+}
+
+button {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+}
