@@ -28,6 +28,6 @@
     "@vitejs/plugin-react": "^4.7.0",
     "typescript": "~5.6.3",
     "vite": "^6.3.5",
-    "@types/node": "^22.10.0"
+    "@types/node": "^26.6.6"
   }
 }
