@@ -440,7 +440,7 @@ main,
 }
 .hero-title {
   margin: 18px 0 22px;
-  font-size: clamp(44px, 7.4vw, 92px);
+  font-size: clamp(42px, 6vw, 80px);
   line-height: 0.98;
   letter-spacing: -0.055em;
   font-weight: 700;
