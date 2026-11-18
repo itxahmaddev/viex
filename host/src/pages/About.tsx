@@ -4,6 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { Button, Card, Notice, PageHeader, SettingRow } from "@viex/shared";
 
 const REPO = "https://github.com/itxahmaddev/viex";
+const SITE = "https://viex-remote.vercel.app";
 
 export function About() {
   const [version, setVersion] = useState("…");
@@ -23,6 +24,11 @@ export function About() {
         <SettingRow title="Source code & releases" hint="MIT licensed. Fork it, deploy your own server, point your devices at it.">
           <Button size="sm" onClick={() => void openUrl(REPO)}>
             Open GitHub
+          </Button>
+        </SettingRow>
+        <SettingRow title="Website">
+          <Button size="sm" onClick={() => void openUrl(SITE)}>
+            viex-remote.vercel.app
           </Button>
         </SettingRow>
         <SettingRow title="Report an issue">

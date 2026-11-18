@@ -1,13 +1,16 @@
 <div align="center">
 
-<img src="website/assets/icon.png" width="96" alt="VIEX" />
-
-# viex.
+<a href="https://viex-remote.vercel.app">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/viex-logo-dark.png" />
+    <img src="brand/viex-logo-light.png" alt="VIEX" height="64" />
+  </picture>
+</a>
 
 **Open-source, self-hosted, view-only remote screen viewer.**
 Watch your own PCs live from your phone or laptop — multi-machine, multi-monitor, **$0/month** to run.
 
-[Download](https://github.com/itxahmaddev/viex/releases/latest) · [Setup guide](docs/SETUP.md) · [Architecture](docs/ARCHITECTURE.md) · [Report an issue](https://github.com/itxahmaddev/viex/issues)
+[Website](https://viex-remote.vercel.app) · [Download](https://github.com/itxahmaddev/viex/releases/latest) · [Setup guide](docs/SETUP.md) · [Architecture](docs/ARCHITECTURE.md) · [Report an issue](https://github.com/itxahmaddev/viex/issues)
 
 </div>
 

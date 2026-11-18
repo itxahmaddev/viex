@@ -974,3 +974,36 @@ main,
   opacity: 1 !important;
   transform: none !important;
 }
+
+/* ---------- Logo (theme-aware) ---------- */
+.logo {
+  height: 28px;
+  width: auto;
+}
+.footer .logo {
+  height: 30px;
+}
+:root[data-theme="dark"] .logo-light,
+:root:not([data-theme="light"]) .logo-light {
+  display: none;
+}
+:root[data-theme="light"] .logo-dark {
+  display: none;
+}
+.loader-mark {
+  width: 84px;
+  height: auto;
+  fill: none;
+  stroke: none;
+  animation: logo-pulse 1.2s var(--ease) infinite alternate;
+}
+@keyframes logo-pulse {
+  from {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}

@@ -1,29 +1,29 @@
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SVGProps } from "react";
+import markLight from "../assets/viex-mark-light.png";
+import markDark from "../assets/viex-mark-dark.png";
+import logoLight from "../assets/viex-logo-light.png";
+import logoDark from "../assets/viex-logo-dark.png";
 
 const cx = (...parts: Array<string | false | null | undefined>) => parts.filter(Boolean).join(" ");
 
 /* ---------- Brand ---------- */
 
-export function ViexMark({ size = 16, ...rest }: { size?: number } & SVGProps<SVGSVGElement>) {
+/** The VIEX monitor-cast mark (theme-aware: black art on light, light art on dark). */
+export function ViexMark({ size = 24, className }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...rest}>
-      <rect x="2.5" y="4.5" width="19" height="12.5" rx="3.5" stroke="currentColor" strokeWidth="2" />
-      <circle cx="12" cy="10.75" r="2.7" fill="currentColor" />
-      <path d="M8.5 20.5h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
+    <span className={cx("inline-block shrink-0", className)} style={{ width: size, height: size }}>
+      <img src={markLight} alt="" width={size} height={size} className="block size-full object-contain dark:hidden" draggable={false} />
+      <img src={markDark} alt="" width={size} height={size} className="hidden size-full object-contain dark:block" draggable={false} />
+    </span>
   );
 }
 
-/** `viex.` wordmark with the blue full stop and a boxed tag, like Yap's "yap. STT". */
+/** The full VIEX lockup (mark + wordmark) with an optional boxed tag, like Yap's "yap. STT". */
 export function Wordmark({ tag }: { tag?: string }) {
   return (
-    <div className="flex items-center gap-2 px-1.5">
-      <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-lg bg-foreground text-background">
-        <ViexMark size={16} />
-      </span>
-      <span className="text-[17px] font-semibold leading-none tracking-[-0.04em]">
-        viex<span className="text-primary">.</span>
-      </span>
+    <div className="flex items-center gap-2.5 px-1.5">
+      <img src={logoLight} alt="VIEX" height={26} className="block h-[26px] w-auto dark:hidden" draggable={false} />
+      <img src={logoDark} alt="VIEX" height={26} className="hidden h-[26px] w-auto dark:block" draggable={false} />
       {tag && (
         <span className="rounded-[5px] border border-border bg-muted px-1 py-[3px] font-mono text-[9.5px] font-medium leading-none text-muted-foreground">
           {tag}
