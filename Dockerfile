@@ -4,7 +4,7 @@
 # Render's Blueprint (render.yaml) uses this file too.
 
 # ---- 1. build the web viewer ------------------------------------------------
-FROM node:22-alpine AS viewer
+FROM node:26-alpine AS viewer
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/
@@ -17,7 +17,7 @@ COPY viewer viewer
 RUN npm run build -w viewer
 
 # ---- 2. the relay -----------------------------------------------------------
-FROM node:22-alpine
+FROM node:26-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 COPY relay/package.json ./package.json
