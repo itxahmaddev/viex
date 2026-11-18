@@ -14,9 +14,9 @@ const path = require("node:path");
 
 const root = path.join(__dirname, "..");
 const SRC = {
-  wordmark: path.join(root, "LOGO", "Minimal Black VIEX Wordmark.png"),
-  mark: path.join(root, "LOGO", "VIEX Monitor Casting Logo.png"),
-  logo: path.join(root, "LOGO", "VIEX Tech Cast Logo.png"),
+  wordmark: path.join(root, "LOGO", "VIEX Blue Ribbon Logo - Copy.png"),
+  mark: path.join(root, "LOGO", "VIEX Blue Ribbon Logo - Copy - Copy.png"),
+  logo: path.join(root, "LOGO", "VIEX Blue Ribbon Logo.png"),
 };
 const OUT = path.join(root, "brand");
 const INK_DARK = [239, 240, 242]; // text color used on dark backgrounds (matches --dark-color-text)
@@ -60,7 +60,7 @@ async function fitWidth(buf, width) {
 }
 
 /** Square app icon: dark rounded tile with the dark-theme mark centred. */
-async function appIcon(markDark, size, { rounded = true, scale = 0.64 } = {}) {
+async function appIcon(markDark, size, { rounded = true, scale = 0.78 } = {}) {
   const mark = await sharp(markDark).resize({ width: Math.round(size * scale), height: Math.round(size * scale), fit: "inside" }).toBuffer();
   const radius = Math.round(size * 0.223);
   const tile = Buffer.from(
