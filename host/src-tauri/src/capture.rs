@@ -124,7 +124,7 @@ pub fn start_capture(
                     let max_width = ctl.max_width.load(Ordering::Relaxed);
                     let rgb = if max_width > 0 && frame.width() > max_width {
                         let height = ((frame.height() as u64 * max_width as u64) / frame.width() as u64).max(1) as u32;
-                        let resized = imageops::resize(&frame, max_width, height, FilterType::Triangle);
+                        let resized = imageops::resize(&frame, max_width, height, FilterType::CatmullRom);
                         DynamicImage::ImageRgba8(resized).into_rgb8()
                     } else {
                         DynamicImage::ImageRgba8(frame).into_rgb8()

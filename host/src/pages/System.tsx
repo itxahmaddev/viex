@@ -48,6 +48,17 @@ export function System() {
             </Button>
           </div>
         </SettingRow>
+        <SettingRow title="Stream quality" hint="Higher is sharper but uses more bandwidth and CPU. Applies to the next session.">
+          <Segmented
+            value={config?.quality ?? "high"}
+            options={[
+              { value: "balanced", label: "Balanced" },
+              { value: "high", label: "High" },
+              { value: "max", label: "Max" },
+            ]}
+            onChange={(quality) => void host.saveConfig({ quality })}
+          />
+        </SettingRow>
         <SettingRow title="Theme">
           <Segmented
             value={config?.theme ?? "system"}

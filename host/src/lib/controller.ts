@@ -19,6 +19,8 @@ export interface HostConfig {
   server_url: string;
   trusted_viewers: TrustedViewer[];
   custom_ice: string;
+  /** Stream quality preset (more detail = more bandwidth and CPU). */
+  quality: QualityLevel;
   theme: "system" | "light" | "dark";
   setup_complete: boolean;
 }
@@ -63,6 +65,31 @@ interface CaptureStream {
 }
 
 const MONITOR_POLL_MS = 20_000;
+
+type Profile = { fps: number; maxWidth: number; quality: number };
+export type QualityLevel = "balanced" | "high" | "max";
+
+/** Capture size / JPEG quality / fps per view mode, plus the WebRTC bitrate ceiling per stream. */
+const QUALITY_PRESETS: Record<QualityLevel, { single: Profile; grid: Profile; gridMany: Profile; bitrate: number }> = {
+  balanced: {
+    single: { fps: 15, maxWidth: 1920, quality: 75 },
+    grid: { fps: 10, maxWidth: 1280, quality: 70 },
+    gridMany: { fps: 8, maxWidth: 1024, quality: 65 },
+    bitrate: 3_500_000,
+  },
+  high: {
+    single: { fps: 20, maxWidth: 2560, quality: 86 },
+    grid: { fps: 15, maxWidth: 1920, quality: 82 },
+    gridMany: { fps: 12, maxWidth: 1600, quality: 78 },
+    bitrate: 8_000_000,
+  },
+  max: {
+    single: { fps: 24, maxWidth: 3840, quality: 92 },
+    grid: { fps: 20, maxWidth: 2560, quality: 90 },
+    gridMany: { fps: 15, maxWidth: 1920, quality: 86 },
+    bitrate: 16_000_000,
+  },
+};
 
 /**
  * Owns everything the Host does: keeps the Relay connection, runs the permission engine,
@@ -354,6 +381,7 @@ class HostController {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         const stream = canvas.captureStream(0);
         const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
+        track.contentHint = "detail"; // screen content: favour text sharpness over motion smoothing
         pc.addTrack(track, stream);
         this.streams.push({ monitor, canvas, ctx, track, stream, decoding: false });
       }
@@ -403,13 +431,12 @@ class HostController {
   /** Quality per monitor for a given view hint: grid = everything small, single = focused one sharp, rest paused. */
   private profileFor(hint: ViewHint) {
     const count = this.streams.length || this.state.monitors.length || 1;
+    const preset = QUALITY_PRESETS[this.state.config?.quality ?? "high"] ?? QUALITY_PRESETS.high;
     return (monitorId: number) => {
       if (hint.mode === "single") {
-        return monitorId === hint.monitor_id
-          ? { fps: 15, maxWidth: 1920, quality: 70 }
-          : { fps: 0, maxWidth: 640, quality: 50 };
+        return monitorId === hint.monitor_id ? preset.single : { fps: 0, maxWidth: 640, quality: 50 };
       }
-      return count <= 2 ? { fps: 10, maxWidth: 1280, quality: 60 } : { fps: 8, maxWidth: 960, quality: 55 };
+      return count <= 2 ? preset.grid : preset.gridMany;
     };
   }
 
@@ -457,12 +484,14 @@ class HostController {
     if (!pc || this.state.session?.session_id !== sessionId) return;
     await pc.setRemoteDescription(sdp);
     for (const candidate of this.queuedCandidates.splice(0)) await pc.addIceCandidate(candidate).catch(() => {});
-    // Best-effort bitrate cap so a phone on mobile data isn't flooded.
+    // Per-stream bitrate ceiling from the Quality setting; keep sharpness over frame rate when bandwidth dips.
+    const { bitrate } = QUALITY_PRESETS[this.state.config?.quality ?? "high"] ?? QUALITY_PRESETS.high;
     for (const sender of pc.getSenders()) {
       try {
         const params = sender.getParameters();
         if (params.encodings?.length) {
-          params.encodings[0].maxBitrate = 2_500_000;
+          params.encodings[0].maxBitrate = bitrate;
+          (params as RTCRtpSendParameters & { degradationPreference?: string }).degradationPreference = "maintain-resolution";
           await sender.setParameters(params);
         }
       } catch {

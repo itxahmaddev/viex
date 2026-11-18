@@ -26,6 +26,8 @@ pub struct Config {
     pub trusted_viewers: Vec<TrustedViewer>,
     /// JSON array of ICE servers; empty means "use the Relay's / built-in defaults".
     pub custom_ice: String,
+    /// "balanced" | "high" | "max" — stream quality preset (empty = high).
+    pub quality: String,
     /// "system" | "light" | "dark"
     pub theme: String,
     pub setup_complete: bool,
@@ -54,6 +56,10 @@ pub fn load(app: &AppHandle) -> Result<Config, String> {
             .and_then(|h| h.into_string().ok())
             .filter(|h| !h.is_empty())
             .unwrap_or_else(|| "My-PC".into());
+        dirty = true;
+    }
+    if config.quality.is_empty() {
+        config.quality = "high".into();
         dirty = true;
     }
     if config.theme.is_empty() {
