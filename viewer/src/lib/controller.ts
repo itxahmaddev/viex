@@ -117,6 +117,7 @@ class ViewerController {
   private queuedCandidates: RTCIceCandidateInit[] = [];
   private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connectTimer: ReturnType<typeof setTimeout> | null = null;
+  private videoTimer: ReturnType<typeof setTimeout> | null = null;
 
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -298,8 +299,9 @@ class ViewerController {
       }
     };
     pc.ontrack = (event) => {
-      const stream = event.streams[0];
-      if (!stream) return;
+      if (this.videoTimer) clearTimeout(this.videoTimer);
+      this.videoTimer = null;
+      const stream = event.streams[0] ?? new MediaStream([event.track]);
       const session = this.state.session;
       if (!session || session.tiles.some((t) => t.stream_id === stream.id)) return;
       const tile: Tile = { stream_id: stream.id, monitor_id: null, label: `Screen ${session.tiles.length + 1}`, w: 0, h: 0, stream };
@@ -310,7 +312,17 @@ class ViewerController {
       if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
       if (pc.connectionState === "connected") {
         if (this.connectTimer) clearTimeout(this.connectTimer);
+        if (this.videoTimer) clearTimeout(this.videoTimer);
+        this.videoTimer = null;
         this.setSession({ phase: "live", detail: "Connected — waiting for video…" });
+        if (this.state.session?.tiles.length === 0) {
+          this.videoTimer = setTimeout(() => {
+            const current = this.state.session;
+            if (this.pc === pc && current?.phase === "live" && current.tiles.length === 0) {
+              this.teardown("Connected to the PC, but no screen video arrived. Check that VIEX Host is sharing a display, then reconnect.");
+            }
+          }, 15_000);
+        }
         if (isNative()) void ViexNative.setWatching({ active: true }).catch(() => {});
       }
       else if (pc.connectionState === "disconnected")
@@ -391,6 +403,8 @@ class ViewerController {
     this.disconnectTimer = null;
     if (this.connectTimer) clearTimeout(this.connectTimer);
     this.connectTimer = null;
+    if (this.videoTimer) clearTimeout(this.videoTimer);
+    this.videoTimer = null;
     if (session?.session_id && notifyRelay) this.relay?.send({ type: "session-end", session_id: session.session_id });
     this.meta?.close();
     this.meta = null;
