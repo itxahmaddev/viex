@@ -14,6 +14,11 @@
   --line-strong: rgb(255 255 255 / 0.22);
   --inv-bg: #fff;
   --inv-fg: #000;
+  --inv-fg-rgb: 0 0 0;
+  --inv-fg-2: #3a3a3a;
+  --inv-muted: #6a6a6a;
+  --inv-line: rgb(0 0 0 / 0.09);
+  --inv-line-strong: rgb(0 0 0 / 0.2);
   --accent: #5a94ff;
   --live: #f87171;
   --shadow: 0 30px 80px -30px rgb(255 255 255 / 0.12);
@@ -33,6 +38,11 @@
   --line-strong: rgb(0 0 0 / 0.2);
   --inv-bg: #0a0a0a;
   --inv-fg: #fff;
+  --inv-fg-rgb: 255 255 255;
+  --inv-fg-2: #c2c2c2;
+  --inv-muted: #8c8c8c;
+  --inv-line: rgb(255 255 255 / 0.1);
+  --inv-line-strong: rgb(255 255 255 / 0.22);
   --accent: #275de5;
   --live: #dc2626;
   --shadow: 0 30px 70px -30px rgb(0 0 0 / 0.22);
@@ -989,6 +999,43 @@ main,
   border-radius: 12px;
   border: 1px solid var(--line);
   color: var(--accent);
+}
+
+/* One download stands out as the light panel against the otherwise all-dark page — same
+   rhythm as Yap's own download section, not a literal copy of its content. The surface
+   swaps (background/text/lines), everything else (.card, .btn-solid, .dl-icon) just reads
+   its tokens, which this re-scopes locally instead of duplicating every rule. */
+.dl-featured {
+  background: var(--inv-bg);
+  color: var(--inv-fg);
+  border-color: var(--inv-line-strong);
+  --fg-2: var(--inv-fg-2);
+  --fg-rgb: var(--inv-fg-rgb);
+  --muted: var(--inv-muted);
+  --line: var(--inv-line);
+  --line-strong: var(--inv-line-strong);
+}
+.dl-featured:hover {
+  border-color: var(--inv-line-strong);
+}
+/* .btn-solid normally reads --inv-bg/--inv-fg to contrast against the page — but this
+   card already IS that inverted surface, so its own solid button instead needs to match
+   the page's ordinary colors (--bg/--fg), the one pair this rule leaves untouched above. */
+.dl-featured .btn-solid {
+  background: var(--bg);
+  color: var(--fg);
+}
+.dl-recommended {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  margin-bottom: 2px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-2);
 }
 .tag {
   margin-left: 6px;
