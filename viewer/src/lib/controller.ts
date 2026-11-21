@@ -11,6 +11,8 @@ import {
   type ServerMessage,
 } from "@viex/shared";
 
+import { ViexNative } from "./nativePlugin";
+
 declare const __APP_VERSION__: string;
 export const APP_VERSION = __APP_VERSION__;
 
@@ -217,6 +219,11 @@ class ViewerController {
     switch (message.type) {
       case "device-list":
         this.set({ devices: message.devices });
+        if (isNative()) {
+          void ViexNative.updateDevices({
+            devices: message.devices.map((d) => ({ name: d.name, online: true })),
+          }).catch(() => {});
+        }
         return;
       case "request-sent":
         if (session) this.setSession({ session_id: message.session_id });
@@ -304,6 +311,7 @@ class ViewerController {
       if (pc.connectionState === "connected") {
         if (this.connectTimer) clearTimeout(this.connectTimer);
         this.setSession({ phase: "live", detail: "Connected — waiting for video…" });
+        if (isNative()) void ViexNative.setWatching({ active: true }).catch(() => {});
       }
       else if (pc.connectionState === "disconnected")
         this.disconnectTimer = setTimeout(() => this.teardown("The connection dropped."), 10_000);
@@ -390,6 +398,7 @@ class ViewerController {
     this.pc = null;
     this.queuedCandidates = [];
     this.metaOrder = [];
+    if (session && isNative()) void ViexNative.setWatching({ active: false }).catch(() => {});
     this.set({ session: null, ...(notice ? { notice } : {}) });
     this.refresh();
   }

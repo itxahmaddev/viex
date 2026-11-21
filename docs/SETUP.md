@@ -139,8 +139,11 @@ Just open your Relay URL (`https://<your-relay>.onrender.com`). Sign in the same
 2. Tap **Watch**.
 3. On the PC, a popup appears: **Accept once**, **Always allow**, or **Reject**. (After "Always allow", that viewer connects instantly next time.)
 4. You are connected. With several monitors you see a **grid**; tap a tile for **full screen**, swipe left/right (or use the pills) to switch monitors, **Grid** to go back. Tap **Stop** to leave.
+5. On a single screen, **pinch to zoom** in for a closer look, drag to pan around, and double-tap to reset. Tap **Mini player** to float that screen in a small window while you use other apps (Android: real system Picture-in-Picture, so it keeps playing even after you switch away).
 
-While you watch, the PC shows a small **"VIEX is live"** pill and a red tray icon. That is intentional and cannot be turned off — see below.
+While you watch, the PC shows a small **"VIEX is live"** pill and a red tray icon — unless that viewer is set to Quiet Mode, which shows nothing at all (see [Permission modes](../README.md#permission-modes)).
+
+On Android, a home-screen widget shows your last-known device list (added after the app, from your home screen's widget picker) without having to open the app first.
 
 ---
 

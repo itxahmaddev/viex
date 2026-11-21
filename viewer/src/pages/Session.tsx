@@ -1,9 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Badge, Button, IconClose, IconExpand, IconGrid, StatusDot } from "@viex/shared";
 import { viewer, type Tile } from "../lib/controller";
 import { useViewer } from "../lib/useViewer";
+import { ViexNative } from "../lib/nativePlugin";
 
-function VideoTile({ tile, contain }: { tile: Tile; contain?: boolean }) {
+const isNativeApp = () => Capacitor.getPlatform() !== "web";
+
+function VideoTile({
+  tile,
+  contain,
+  videoRef,
+}: {
+  tile: Tile;
+  contain?: boolean;
+  videoRef?: (el: HTMLVideoElement | null) => void;
+}) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const video = ref.current;
@@ -14,7 +26,10 @@ function VideoTile({ tile, contain }: { tile: Tile; contain?: boolean }) {
   }, [tile.stream]);
   return (
     <video
-      ref={ref}
+      ref={(el) => {
+        (ref as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+        videoRef?.(el);
+      }}
       autoPlay
       playsInline
       muted
@@ -23,11 +38,93 @@ function VideoTile({ tile, contain }: { tile: Tile; contain?: boolean }) {
   );
 }
 
+/** Pinch-to-zoom + drag-to-pan on the focused screen. Disabled while zoomed out (scale 1),
+ *  where a horizontal swipe instead switches monitors — the two gestures never fight because
+ *  a swipe only fires when the pinch never moved the scale away from 1. */
+function useZoomPan(enabled: boolean) {
+  const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 });
+  const gesture = useRef<{
+    mode: "none" | "pinch" | "pan";
+    startDist: number;
+    startScale: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    lastTap: number;
+  }>({ mode: "none", startDist: 0, startScale: 1, startX: 0, startY: 0, originX: 0, originY: 0, lastTap: 0 });
+
+  const clamp = (t: { scale: number; x: number; y: number }) => {
+    const scale = Math.min(4, Math.max(1, t.scale));
+    const maxPan = (scale - 1) * 160; // generous bound; the video itself clips via overflow-hidden
+    return { scale, x: Math.min(maxPan, Math.max(-maxPan, t.x)), y: Math.min(maxPan, Math.max(-maxPan, t.y)) };
+  };
+
+  const reset = () => setTransform({ scale: 1, x: 0, y: 0 });
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!enabled) return;
+    const g = gesture.current;
+    if (e.touches.length === 2) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      g.mode = "pinch";
+      g.startDist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+      g.startScale = transform.scale;
+    } else if (e.touches.length === 1 && transform.scale > 1.01) {
+      g.mode = "pan";
+      g.startX = e.touches[0].clientX;
+      g.startY = e.touches[0].clientY;
+      g.originX = transform.x;
+      g.originY = transform.y;
+    } else {
+      g.mode = "none";
+    }
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const g = gesture.current;
+    if (g.mode === "pinch" && e.touches.length === 2) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+      const scale = g.startScale * (dist / g.startDist);
+      setTransform((t) => clamp({ ...t, scale }));
+    } else if (g.mode === "pan" && e.touches.length === 1) {
+      const dx = e.touches[0].clientX - g.startX;
+      const dy = e.touches[0].clientY - g.startY;
+      setTransform((t) => clamp({ ...t, x: g.originX + dx, y: g.originY + dy }));
+    }
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const g = gesture.current;
+    const wasZooming = g.mode !== "none";
+    g.mode = "none";
+    setTransform((t) => (t.scale < 1.05 ? { scale: 1, x: 0, y: 0 } : t));
+    if (wasZooming || e.touches.length > 0) return;
+
+    // Double-tap to reset (or to zoom in to 2x from 1x).
+    const now = Date.now();
+    if (now - g.lastTap < 300) {
+      g.lastTap = 0;
+      setTransform((t) => (t.scale > 1.01 ? { scale: 1, x: 0, y: 0 } : { scale: 2, x: 0, y: 0 }));
+    } else {
+      g.lastTap = now;
+    }
+  };
+
+  return { transform, zoomed: transform.scale > 1.01, reset, onTouchStart, onTouchMove, onTouchEnd };
+}
+
 export function Session() {
   const { session } = useViewer();
   const [chromeVisible, setChromeVisible] = useState(true);
+  const [pipSupported, setPipSupported] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchX = useRef<number | null>(null);
+  const activeVideo = useRef<HTMLVideoElement | null>(null);
+
+  const live = !!session && session.phase === "live" && session.tiles.length > 0;
+  const zoomPan = useZoomPan(live && session?.mode === "single");
 
   // Keep the screen awake while watching.
   useEffect(() => {
@@ -37,6 +134,11 @@ export function Session() {
       .then((l) => (lock = l))
       .catch(() => {});
     return () => void lock?.release().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (isNativeApp()) void ViexNative.isPipSupported().then((r) => setPipSupported(r.supported)).catch(() => {});
+    else setPipSupported(typeof document !== "undefined" && "pictureInPictureEnabled" in document && document.pictureInPictureEnabled);
   }, []);
 
   const poke = () => {
@@ -53,7 +155,6 @@ export function Session() {
 
   if (!session) return null;
   const { tiles, mode, focus, phase, device, detail, noTurn } = session;
-  const live = phase === "live" && tiles.length > 0;
 
   const go = (delta: number) => {
     const next = (focus + delta + tiles.length) % tiles.length;
@@ -66,6 +167,18 @@ export function Session() {
       else await document.documentElement.requestFullscreen();
     } catch {
       /* not available in every webview */
+    }
+  };
+
+  /** The "mini player" — floats the current screen in a small system window so watching
+   *  continues while you use other apps. Native Android gets real Picture-in-Picture;
+   *  on the web it's the standard browser PiP window for the focused <video>. */
+  const enterMiniPlayer = async () => {
+    try {
+      if (isNativeApp()) await ViexNative.enterPip();
+      else if (activeVideo.current && document.pictureInPictureEnabled) await activeVideo.current.requestPictureInPicture();
+    } catch {
+      /* unsupported on this device/launcher — stays full screen */
     }
   };
 
@@ -126,16 +239,40 @@ export function Session() {
         </div>
       ) : (
         <div
-          className="h-full w-full"
-          onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
+          className="h-full w-full touch-none overflow-hidden"
+          onTouchStart={(e) => {
+            touchX.current = e.touches.length === 1 ? e.touches[0].clientX : null;
+            zoomPan.onTouchStart(e);
+          }}
+          onTouchMove={zoomPan.onTouchMove}
           onTouchEnd={(e) => {
-            if (touchX.current === null || tiles.length < 2) return;
+            zoomPan.onTouchEnd(e);
+            if (zoomPan.zoomed || touchX.current === null || tiles.length < 2) return;
             const dx = e.changedTouches[0].clientX - touchX.current;
             touchX.current = null;
             if (Math.abs(dx) > 70) go(dx < 0 ? 1 : -1);
           }}
         >
-          {tiles[focus] && <VideoTile key={tiles[focus].stream_id} tile={tiles[focus]} contain />}
+          <div
+            className="h-full w-full"
+            style={{
+              transform: `translate(${zoomPan.transform.x}px, ${zoomPan.transform.y}px) scale(${zoomPan.transform.scale})`,
+              transition: zoomPan.zoomed ? "none" : "transform 0.2s ease-out",
+            }}
+          >
+            {tiles[focus] && (
+              <VideoTile key={tiles[focus].stream_id} tile={tiles[focus]} contain videoRef={(el) => (activeVideo.current = el)} />
+            )}
+          </div>
+          {zoomPan.zoomed && (
+            <button
+              type="button"
+              className="absolute right-3 top-[calc(var(--safe-top)+3.75rem)] z-10 rounded-full bg-black/60 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur"
+              onClick={zoomPan.reset}
+            >
+              Reset zoom
+            </button>
+          )}
         </div>
       )}
 
@@ -165,6 +302,17 @@ export function Session() {
           >
             <IconGrid size={14} />
             {mode === "grid" ? "Single" : "Grid"}
+          </Button>
+        )}
+        {live && mode === "single" && pipSupported && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="bg-white/10 text-white hover:bg-white/20 border-white/15"
+            onClick={() => void enterMiniPlayer()}
+            aria-label="Mini player"
+          >
+            Mini player
           </Button>
         )}
         <Button
