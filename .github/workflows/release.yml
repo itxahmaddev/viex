@@ -33,7 +33,7 @@ jobs:
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: v
         run: |
           base=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
@@ -43,8 +43,8 @@ jobs:
     name: Test & typecheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -87,8 +87,8 @@ jobs:
             bundles: dmg
             updater_key: darwin-x86_64
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -153,7 +153,7 @@ jobs:
           if [ -n "${sig:-}" ] && [ -f "$sig" ]; then
             cp "$sig" "out/${updater_name}.sig"
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: host-${{ matrix.name }}
           path: out/*
@@ -169,16 +169,16 @@ jobs:
       # Optional: set these repository secrets to sign with your own key instead of the community keystore.
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - run: npm ci
       - run: npm run build -w viewer
       - name: Generate the Android project
@@ -202,7 +202,7 @@ jobs:
         run: |
           mkdir out
           cp viewer/android/app/build/outputs/apk/release/app-release.apk out/VIEX-Viewer.apk
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: android
           path: out/VIEX-Viewer.apk
@@ -213,8 +213,8 @@ jobs:
     needs: [version, test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -241,7 +241,7 @@ jobs:
           Docs: https://github.com/itxahmaddev/viex/blob/main/docs/SETUP.md
           EOF
           (cd pkg && zip -qr ../out/viex-relay.zip viex-relay)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: relay
           path: out/viex-relay.zip
@@ -252,16 +252,16 @@ jobs:
     needs: [version, host, android, relay]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           name: android
           path: dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: relay
           path: dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: host-dist
           pattern: "host-*"
