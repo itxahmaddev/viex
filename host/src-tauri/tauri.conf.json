@@ -29,7 +29,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": ["nsis", "deb", "appimage", "dmg"],
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
     "shortDescription": "Watch this computer live from your phone or laptop.",
     "category": "Utility",
@@ -38,6 +38,20 @@
         "installMode": "currentUser",
         "installerIcon": "icons/icon.ico"
       }
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libayatana-appindicator3-1"]
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERCN0IyNzgwQzA3NDE0NTMKUldSVEZIVEFnQ2Q3MjhTOEtLSzVoVUFTY3R3NFZoRFpTRTl6ajVaaUN1TEhHTmdzMFI0MEJ4RVoK",
+      "endpoints": ["https://github.com/itxahmaddev/viex/releases/latest/download/latest.json"]
     }
   }
 }

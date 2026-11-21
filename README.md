@@ -60,11 +60,11 @@ Every push to `main` runs [`.github/workflows/release.yml`](.github/workflows/re
 
 Versions are `MAJOR.MINOR.<run number>` (e.g. `v0.1.12`). Dependabot keeps npm, Cargo, Actions and Docker dependencies current.
 
-## The one hard line: the live indicator
+## Permission modes
 
-Ask, Auto-Approve and Quiet Mode only change **whether you get a popup**. In *every* mode, while someone is watching, the Host shows a small always-on-top **"VIEX is live"** pill and a red tray icon. It cannot be disabled in this app (a watchdog recreates it if closed).
-
-Without that, a screen viewer becomes a covert surveillance tool — and since this project is open source, the feature would ship to every fork. **Forks are asked to keep the indicator in their default build.** See [`host/src-tauri/src/live.rs`](host/src-tauri/src/live.rs).
+- **Ask** (default) — a popup asks you to Accept or Reject every connection.
+- **Auto-Approve** — a trusted viewer connects instantly. The Host still shows a small always-on-top **"VIEX is live"** pill and a red tray icon while watched (a watchdog recreates the pill if it's closed), and it can't be turned off in this mode.
+- **Quiet Mode** — like Auto-Approve, but with *no* on-screen signal at all: no popup, no pill, no tray change. This is opt-in per viewer, confirmed on the Host PC itself behind a dialog that spells out exactly what it means. It exists for watching a computer that is entirely your own; it is not meant for watching a PC other people also use. See [`host/src-tauri/src/live.rs`](host/src-tauri/src/live.rs) and [`Viewers.tsx`](host/src/pages/Viewers.tsx).
 
 ## Repository layout
 

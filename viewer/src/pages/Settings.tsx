@@ -1,12 +1,54 @@
 import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Button, Card, DEFAULT_ICE_SERVERS, Notice, PageHeader, Segmented, SettingRow, TextArea, TextInput, parseIceServers } from "@viex/shared";
 import { APP_VERSION, viewer } from "../lib/controller";
 import { useViewer } from "../lib/useViewer";
 
 const REPO = "https://github.com/itxahmaddev/viex";
 
+interface AvailableUpdate {
+  version: string;
+  downloadUrl: string;
+}
+
+/** Android has no Play Store auto-update here, so this is the closest equivalent:
+ *  check GitHub Releases on open, and if a newer APK exists, offer a one-tap download.
+ *  Android still requires the user's own confirmation to install it (OS security). */
+function useApkUpdateCheck(): AvailableUpdate | null {
+  const [update, setUpdate] = useState<AvailableUpdate | null>(null);
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return;
+    fetch("https://api.github.com/repos/itxahmaddev/viex/releases/latest", {
+      headers: { Accept: "application/vnd.github+json" },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((release: { tag_name?: string; assets?: { name: string; browser_download_url: string }[] } | null) => {
+        if (!release?.tag_name) return;
+        const latest = release.tag_name.replace(/^v/, "");
+        if (latest === APP_VERSION || !isNewer(latest, APP_VERSION)) return;
+        const apk = release.assets?.find((a) => a.name.endsWith(".apk"));
+        if (apk) setUpdate({ version: latest, downloadUrl: apk.browser_download_url });
+      })
+      .catch(() => {
+        /* offline or rate limited: silently skip, same as the website widget */
+      });
+  }, []);
+  return update;
+}
+
+function isNewer(a: string, b: string): boolean {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diff !== 0) return diff > 0;
+  }
+  return false;
+}
+
 export function Settings() {
   const { config } = useViewer();
+  const update = useApkUpdateCheck();
   const [name, setName] = useState(config?.viewer_name ?? "");
   const saved = config?.custom_ice ?? "";
   const [ice, setIce] = useState(saved);
@@ -19,6 +61,17 @@ export function Settings() {
   return (
     <>
       <PageHeader title="Settings" subtitle="This device’s connection to your VIEX server." />
+
+      {update && (
+        <Notice tone="ok" title={`Update available — v${update.version}`}>
+          <div className="flex items-center justify-between gap-3">
+            <span>A newer VIEX Viewer is out. Download it and tap the file to install.</span>
+            <Button size="sm" onClick={() => window.open(update.downloadUrl, "_blank")}>
+              Download
+            </Button>
+          </div>
+        </Notice>
+      )}
 
       <Card className="mb-6">
         <SettingRow title="Server">

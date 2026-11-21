@@ -1,7 +1,9 @@
 name: Build & Release
 
-# Every push to `main` builds the Windows Host installer, the Android Viewer APK and the
-# Relay (backend) bundle, then publishes them as a new GitHub Release marked "Latest".
+# Every push to `main` builds the Windows/Linux/macOS Host installers, the Android Viewer
+# APK and the Relay (backend) bundle, then publishes them as a new GitHub Release marked
+# "Latest". The Host builds also produce signed auto-update artifacts + a `latest.json`
+# manifest, which is what `host/src-tauri/tauri.conf.json`'s updater endpoint reads.
 on:
   push:
     branches: [main]
@@ -50,10 +52,40 @@ jobs:
       - run: npm test
       - run: npm run typecheck
 
-  windows:
-    name: Windows Host (.exe)
+  # Builds the Host installer for one OS/arch, plus (when TAURI_SIGNING_PRIVATE_KEY is set)
+  # the signed auto-update artifact + its .sig next to it. Unsigned builds still produce a
+  # normal installer — updates just won't be offered until the signing secret is added.
+  host:
+    name: Host (${{ matrix.name }})
     needs: [version, test]
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.VIEX_UPDATER_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.VIEX_UPDATER_PRIVATE_KEY_PASSWORD }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+            updater_key: windows-x86_64
+          - name: linux-x64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: appimage,deb
+            updater_key: linux-x86_64
+          - name: macos-arm64
+            os: macos-14
+            target: aarch64-apple-darwin
+            bundles: dmg
+            updater_key: darwin-aarch64
+          - name: macos-x64
+            os: macos-13
+            target: x86_64-apple-darwin
+            bundles: dmg
+            updater_key: darwin-x86_64
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -61,22 +93,70 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: host/src-tauri
+          key: ${{ matrix.name }}
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf \
+            build-essential curl wget file libxdo-dev libayatana-appindicator3-dev libssl-dev
       - run: npm ci
       - run: node scripts/set-version.mjs ${{ needs.version.outputs.version }}
-      - name: Build installer
-        run: npm run tauri build -w host
-      - name: Collect
+      - name: Build Host (unsigned bundle, signed updater artifact)
+        run: >
+          npm run tauri build -w host --
+          --target ${{ matrix.target }}
+          --bundles ${{ matrix.bundles }}
+          ${{ env.TAURI_SIGNING_PRIVATE_KEY != '' && '--config src-tauri/tauri.updater.conf.json' || '' }}
+      - name: Collect installer + updater artifact
+        id: collect
         shell: bash
         run: |
-          mkdir out
-          cp host/src-tauri/target/release/bundle/nsis/*-setup.exe out/VIEX-Host-Setup.exe
+          set -euo pipefail
+          mkdir -p out
+          target_dir="host/src-tauri/target/${{ matrix.target }}/release/bundle"
+
+          # The renamed installer and its updater artifact always share one base name below,
+          # so the release job can find "<name>" + "<name>.sig" without guessing Tauri's own
+          # generated filename (which embeds the version and may differ run to run).
+          case "${{ matrix.name }}" in
+            windows-x64)
+              cp "$target_dir"/nsis/*-setup.exe "out/VIEX-Host-Setup.exe"
+              sig=$(find "$target_dir/nsis" -name "*-setup.exe.sig" | head -1 || true)
+              updater_name="VIEX-Host-Setup.exe"
+              ;;
+            linux-x64)
+              cp "$target_dir"/appimage/*.AppImage "out/VIEX-Host-x86_64.AppImage"
+              cp "$target_dir"/deb/*.deb "out/VIEX-Host-amd64.deb" || true
+              sig=$(find "$target_dir/appimage" -name "*.AppImage.sig" | head -1 || true)
+              updater_name="VIEX-Host-x86_64.AppImage"
+              ;;
+            macos-arm64)
+              cp "$target_dir"/dmg/*.dmg "out/VIEX-Host-arm64.dmg"
+              sig=$(find "$target_dir/macos" -name "*.app.tar.gz.sig" | head -1 || true)
+              [ -n "$sig" ] && cp "$(dirname "$sig")"/*.app.tar.gz "out/VIEX-Host-arm64.app.tar.gz" || true
+              updater_name="VIEX-Host-arm64.app.tar.gz"
+              ;;
+            macos-x64)
+              cp "$target_dir"/dmg/*.dmg "out/VIEX-Host-x64.dmg"
+              sig=$(find "$target_dir/macos" -name "*.app.tar.gz.sig" | head -1 || true)
+              [ -n "$sig" ] && cp "$(dirname "$sig")"/*.app.tar.gz "out/VIEX-Host-x64.app.tar.gz" || true
+              updater_name="VIEX-Host-x64.app.tar.gz"
+              ;;
+          esac
+
+          if [ -n "${sig:-}" ] && [ -f "$sig" ]; then
+            cp "$sig" "out/${updater_name}.sig"
+          fi
       - uses: actions/upload-artifact@v4
         with:
-          name: windows
-          path: out/VIEX-Host-Setup.exe
+          name: host-${{ matrix.name }}
+          path: out/*
           if-no-files-found: error
 
   android:
@@ -169,13 +249,56 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: [version, windows, android, relay]
+    needs: [version, host, android, relay]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
+          name: android
           path: dist
-          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: relay
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          path: host-dist
+          pattern: "host-*"
+      - name: Build latest.json for the auto-updater
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.version.outputs.version }}"
+          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}"
+          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          platforms="{}"
+
+          declare -A FILES=(
+            [windows-x86_64]="host-dist/host-windows-x64/VIEX-Host-Setup.exe"
+            [linux-x86_64]="host-dist/host-linux-x64/VIEX-Host-x86_64.AppImage"
+            [darwin-aarch64]="host-dist/host-macos-arm64/VIEX-Host-arm64.app.tar.gz"
+            [darwin-x86_64]="host-dist/host-macos-x64/VIEX-Host-x64.app.tar.gz"
+          )
+          for key in "${!FILES[@]}"; do
+            file="${FILES[$key]}"
+            sig_file="${file}.sig"
+            if [ -f "$file" ] && [ -f "$sig_file" ]; then
+              name="$(basename "$file")"
+              sig="$(cat "$sig_file")"
+              platforms=$(echo "$platforms" | jq --arg k "$key" --arg url "$BASE/$name" --arg sig "$sig" \
+                '. + {($k): {url: $url, signature: $sig}}')
+            else
+              echo "No signed updater artifact for $key (set VIEX_UPDATER_PRIVATE_KEY to enable it) — skipping."
+            fi
+          done
+
+          jq -n --arg version "$VERSION" --arg notes "VIEX v${VERSION}" --arg pub_date "$PUB_DATE" --argjson platforms "$platforms" \
+            '{version: $version, notes: $notes, pub_date: $pub_date, platforms: $platforms}' > dist/latest.json
+          cat dist/latest.json
+
+          # Flatten the per-platform Host installers (and their .sig files) into dist/ too.
+          find host-dist -mindepth 2 -maxdepth 2 -type f -exec cp {} dist/ \;
       - name: Write release notes
         run: |
           cat > notes.md <<EOF
@@ -183,14 +306,18 @@ jobs:
 
           | File | What it is |
           |---|---|
-          | **VIEX-Host-Setup.exe** | Windows installer — install on every PC you want to watch |
+          | **VIEX-Host-Setup.exe** | Windows installer |
+          | **VIEX-Host-x86_64.AppImage** | Linux installer (also auto-updates) |
+          | **VIEX-Host-amd64.deb** | Linux installer (Debian/Ubuntu, no auto-update) |
+          | **VIEX-Host-arm64.dmg** / **VIEX-Host-x64.dmg** | macOS installer (Apple Silicon / Intel) |
           | **VIEX-Viewer.apk** | Android app — install on your phone to watch your PCs |
           | **viex-relay.zip** | Backend (Relay + web viewer) — or deploy to Render in one click |
 
           Setup guide: https://github.com/${{ github.repository }}/blob/main/docs/SETUP.md
 
-          > Windows may show a SmartScreen notice (the open-source build is not code-signed): **More info → Run anyway**.
+          > Windows may show a SmartScreen notice, and macOS a Gatekeeper warning (this open-source build is not code-signed): on Windows, **More info → Run anyway**; on macOS, right-click the app → **Open**.
           > On Android, allow "Install unknown apps" for your browser/file manager first.
+          > Once installed, the Windows and Linux Host builds check for and install updates automatically — no re-download needed.
           EOF
       - name: Create release
         env:

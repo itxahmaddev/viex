@@ -1,9 +1,13 @@
-//! The persistent "live" indicator — a project guardrail, not a preference.
+//! The persistent "live" indicator — on by default, opt-out only for Quiet Mode.
 //!
-//! While a viewer is watching, a small always-on-top pill is shown and the tray icon
-//! carries a red dot + tooltip. There is deliberately no setting, flag or command to
-//! turn this off: Quiet Mode only suppresses popups, never the indicator. A watchdog
-//! recreates the pill if it is closed. See README → "The indicator guardrail".
+//! In Ask and Auto-Approve mode, while a viewer is watching, a small always-on-top pill
+//! is shown and the tray icon carries a red dot + tooltip. A watchdog recreates the pill
+//! if it is closed. This cannot be turned off in those two modes.
+//!
+//! Quiet Mode is the one case where the PC owner has explicitly chosen, per viewer, from
+//! this same PC, to allow a viewer to connect with *no* on-screen signal at all (see the
+//! confirmation dialog on the Viewers page). `set_live`'s `silent` flag skips the pill and
+//! the tray change for that case only. See README → "Permission modes".
 
 use std::{
     sync::atomic::{AtomicBool, Ordering},
@@ -21,6 +25,7 @@ pub const TRAY_ID: &str = "viex-tray";
 const INDICATOR_LABEL: &str = "indicator";
 
 static LIVE: AtomicBool = AtomicBool::new(false);
+static SILENT: AtomicBool = AtomicBool::new(false);
 static WATCHDOG_RUNNING: AtomicBool = AtomicBool::new(false);
 
 pub fn show_main(app: &AppHandle) {
@@ -125,11 +130,17 @@ fn urlencode(text: &str) -> String {
 /// `async` on purpose: building a window from a synchronous command runs on the main thread and
 /// deadlocks the app on Windows (WebView2). Async commands run on a worker thread, which is safe.
 #[tauri::command]
-pub async fn set_live(app: AppHandle, live: bool, viewer: String, screens: u32) -> Result<(), String> {
+pub async fn set_live(app: AppHandle, live: bool, viewer: String, screens: u32, silent: bool) -> Result<(), String> {
     LIVE.store(live, Ordering::SeqCst);
+    SILENT.store(silent, Ordering::SeqCst);
     let tray = app.tray_by_id(TRAY_ID);
 
     if live {
+        if silent {
+            // Quiet Mode, confirmed on this PC: no pill, no tray change. Nothing here
+            // signals that a session is active.
+            return Ok(());
+        }
         let text = format!("{} is viewing {} screen{}", viewer, screens, if screens == 1 { "" } else { "s" });
         if let Some(tray) = &tray {
             let _ = tray.set_tooltip(Some(format!("VIEX Host — LIVE: {text}")));
@@ -139,15 +150,19 @@ pub async fn set_live(app: AppHandle, live: bool, viewer: String, screens: u32) 
         }
         open_indicator(&app, &text);
 
-        // Watchdog: if the pill is closed by anything, bring it straight back.
+        // Watchdog: if the pill is closed by anything, bring it straight back — unless
+        // the session has since switched to (or ended as) silent.
         if !WATCHDOG_RUNNING.swap(true, Ordering::SeqCst) {
             let handle = app.clone();
             let text = text.clone();
             thread::spawn(move || {
-                while LIVE.load(Ordering::SeqCst) {
+                while LIVE.load(Ordering::SeqCst) && !SILENT.load(Ordering::SeqCst) {
                     thread::sleep(Duration::from_secs(2));
                     // Called from this worker thread (never the main thread) so window creation can't deadlock.
-                    if LIVE.load(Ordering::SeqCst) && handle.get_webview_window(INDICATOR_LABEL).is_none() {
+                    if LIVE.load(Ordering::SeqCst)
+                        && !SILENT.load(Ordering::SeqCst)
+                        && handle.get_webview_window(INDICATOR_LABEL).is_none()
+                    {
                         open_indicator(&handle, &text);
                     }
                 }

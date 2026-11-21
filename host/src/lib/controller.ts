@@ -1,5 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { disable, enable } from "@tauri-apps/plugin-autostart";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import {
   RelayClient,
   authenticate,
@@ -42,6 +44,8 @@ export interface ActiveSession extends PendingRequest {
   phase: "connecting" | "live";
 }
 
+export type UpdateStatus = "idle" | "checking" | "available" | "downloading" | "installing" | "up-to-date" | "error";
+
 export interface HostState {
   ready: boolean;
   config: HostConfig | null;
@@ -51,6 +55,9 @@ export interface HostState {
   pending: PendingRequest | null;
   session: ActiveSession | null;
   toast: string | null;
+  updateStatus: UpdateStatus;
+  updateVersion: string | null;
+  updateProgress: number;
 }
 
 type ViewHint = { type: "view"; mode: "grid" | "single"; monitor_id?: number };
@@ -109,6 +116,9 @@ class HostController {
     pending: null,
     session: null,
     toast: null,
+    updateStatus: "idle",
+    updateVersion: null,
+    updateProgress: 0,
   };
   private listeners = new Set<() => void>();
   private relay: RelayClient | null = null;
@@ -120,6 +130,8 @@ class HostController {
   private monitorTimer: ReturnType<typeof setInterval> | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private connectTimer: ReturnType<typeof setTimeout> | null = null;
+  private updateCheckTimer: ReturnType<typeof setInterval> | null = null;
+  private pendingUpdate: Update | null = null;
 
   /* ---------- store ---------- */
 
@@ -147,6 +159,57 @@ class HostController {
     this.set({ config, ready: true });
     this.applyTheme(config.theme);
     if (config.setup_complete) await this.startRelay();
+
+    // Zero-click updates: check shortly after launch, then every 6 hours.
+    // A session in progress is never interrupted — see checkForUpdates().
+    setTimeout(() => void this.checkForUpdates(), 5_000);
+    if (this.updateCheckTimer) clearInterval(this.updateCheckTimer);
+    this.updateCheckTimer = setInterval(() => void this.checkForUpdates(), 6 * 60 * 60 * 1000);
+  }
+
+  /* ---------- auto-update ---------- */
+
+  /** Checks GitHub Releases for a newer build and, if found, downloads + installs it
+   *  automatically (unless a viewer is currently connected). The app relaunches itself
+   *  on the new version — no dialogs, no clicks, matching the mobile app's auto-update. */
+  async checkForUpdates(manual = false) {
+    if (this.state.updateStatus === "checking" || this.state.updateStatus === "downloading" || this.state.updateStatus === "installing") return;
+    this.set({ updateStatus: "checking" });
+    try {
+      const update = await check();
+      if (!update) {
+        this.set({ updateStatus: manual ? "up-to-date" : "idle" });
+        return;
+      }
+      this.pendingUpdate = update;
+      this.set({ updateStatus: "available", updateVersion: update.version });
+      if (!this.state.session) await this.installUpdate();
+    } catch {
+      this.set({ updateStatus: manual ? "error" : "idle" });
+    }
+  }
+
+  /** Downloads and installs the already-found update, then relaunches. Safe to call
+   *  again later (e.g. once the current viewing session ends). */
+  async installUpdate() {
+    const update = this.pendingUpdate;
+    if (!update || this.state.session) return;
+    this.set({ updateStatus: "downloading", updateProgress: 0 });
+    let total = 0;
+    let done = 0;
+    try {
+      await update.downloadAndInstall((event) => {
+        if (event.event === "Started") total = event.data.contentLength ?? 0;
+        else if (event.event === "Progress") {
+          done += event.data.chunkLength;
+          this.set({ updateProgress: total ? Math.min(100, Math.round((done / total) * 100)) : 0 });
+        } else if (event.event === "Finished") this.set({ updateStatus: "installing", updateProgress: 100 });
+      });
+      this.pendingUpdate = null;
+      await relaunch();
+    } catch {
+      this.set({ updateStatus: "error" });
+    }
   }
 
   private applyTheme(theme: HostConfig["theme"]) {
@@ -340,8 +403,9 @@ class HostController {
     this.relay?.send({ type: "approved", session_id: req.session_id });
 
     try {
-      // The indicator comes up BEFORE any pixel leaves the machine, in every permission mode.
-      await invoke("set_live", { live: true, viewer: req.viewer_name, screens: monitors.length });
+      // The indicator comes up BEFORE any pixel leaves the machine — except in Quiet Mode,
+      // where the owner has explicitly confirmed, on this PC, that this viewer gets none.
+      await invoke("set_live", { live: true, viewer: req.viewer_name, screens: monitors.length, silent: quiet });
 
       const ice = this.iceServers();
       const pc = new RTCPeerConnection({ iceServers: ice });
@@ -547,9 +611,11 @@ class HostController {
     this.pc?.close();
     this.pc = null;
     this.queuedCandidates = [];
-    void invoke("set_live", { live: false, viewer: "", screens: 0 });
+    void invoke("set_live", { live: false, viewer: "", screens: 0, silent: false });
     this.set({ session: null });
     if (reason === "connection-lost") this.toast("The viewer disconnected.");
+    // An update that arrived mid-session was held back; the viewer just left, so apply it now.
+    if (this.pendingUpdate) void this.installUpdate();
   }
 }
 

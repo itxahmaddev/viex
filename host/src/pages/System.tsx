@@ -4,8 +4,27 @@ import { Button, Card, Modal, PageHeader, Segmented, SettingRow, Switch, TextInp
 import { host } from "../lib/controller";
 import { useHost } from "../lib/useHost";
 
+function updateStatusText(status: ReturnType<typeof useHost>["updateStatus"], version: string | null, progress: number) {
+  switch (status) {
+    case "checking":
+      return "Checking for updates…";
+    case "available":
+      return `Update ${version ?? ""} found — starting download…`.trim();
+    case "downloading":
+      return `Downloading update… ${progress}%`;
+    case "installing":
+      return "Installing — VIEX Host will restart itself.";
+    case "up-to-date":
+      return "You're on the latest version.";
+    case "error":
+      return "Couldn't check for updates. Will try again automatically.";
+    default:
+      return "Checks automatically — no clicks needed.";
+  }
+}
+
 export function System() {
-  const { config, session } = useHost();
+  const { config, session, updateStatus, updateVersion, updateProgress } = useHost();
   const [autostart, setAutostart] = useState<boolean | null>(null);
   const [name, setName] = useState(config?.device_name ?? "");
   const [confirmReset, setConfirmReset] = useState(false);
@@ -69,6 +88,19 @@ export function System() {
             ]}
             onChange={(theme) => void host.saveConfig({ theme })}
           />
+        </SettingRow>
+      </Card>
+
+      <Card className="mb-6">
+        <SettingRow title="Updates" hint={updateStatusText(updateStatus, updateVersion, updateProgress)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={updateStatus === "checking" || updateStatus === "downloading" || updateStatus === "installing"}
+            onClick={() => void host.checkForUpdates(true)}
+          >
+            Check now
+          </Button>
         </SettingRow>
       </Card>
 

@@ -86,23 +86,36 @@ That is the whole fix, and it costs $0.
 
 ## Step 3 — Install VIEX Host on your PC
 
-1. Open the [latest release](https://github.com/itxahmaddev/viex/releases/latest) and download **`VIEX-Host-Setup.exe`**.
-2. Run it. If Windows SmartScreen says *"Windows protected your PC"*, click **More info → Run anyway** (the open-source build is not code-signed).
+1. Open the [latest release](https://github.com/itxahmaddev/viex/releases/latest) and download the installer for your OS:
+   - **Windows** — `VIEX-Host-Setup.exe`
+   - **Linux** — `VIEX-Host-x86_64.AppImage` (auto-updates) or `VIEX-Host-amd64.deb`
+   - **macOS** — `VIEX-Host-arm64.dmg` (Apple Silicon) or `VIEX-Host-x64.dmg` (Intel)
+2. Run it.
+   - Windows: if SmartScreen says *"Windows protected your PC"*, click **More info → Run anyway** (the open-source build is not code-signed).
+   - macOS: right-click the app → **Open** the first time (Gatekeeper; same reason — not code-signed/notarized).
+   - Linux AppImage: `chmod +x` it first, or just double-click if your file manager allows running AppImages.
 3. The installer installs for the current user (no admin rights needed) and launches VIEX Host.
 4. First-run wizard: enter
    - **Server URL** — e.g. `https://viex-relay.onrender.com`
    - **Password** — the `VIEX_PASSWORD` you chose
    - **This PC's name** — what you'll see in the device list
 
-   The password is stored in the **Windows Credential Manager**, not in a plain file. The first connection can take up to a minute if your free Render server was asleep.
+   The password is stored in the OS credential vault (Windows Credential Manager / macOS Keychain / the Linux Secret Service), not in a plain file. The first connection can take up to a minute if your free Render server was asleep.
 5. Done. VIEX Host now:
    - lives in the **system tray** (closing the window keeps it running),
-   - **starts hidden with Windows** and announces itself online — zero clicks,
-   - shows your monitors on the **Home** page.
+   - **starts hidden with the system** and announces itself online — zero clicks,
+   - shows your monitors on the **Home** page,
+   - **checks for updates automatically** on launch and every few hours, and installs them itself (Windows and Linux AppImage builds only — see below).
 
 Repeat on every PC you want to watch. Each gets its own name in the list.
 
 To quit completely: right-click the tray icon → **Quit**. To stop auto-start: **System → Start with the system**.
+
+### Auto-updates
+
+Windows and Linux (AppImage) builds of the Host check `github.com/itxahmaddev/viex/releases/latest` on launch and periodically after that. If a newer version is published, it downloads and installs it in the background and relaunches — no clicks, same as the mobile app. A build in the middle of a viewing session never auto-installs mid-session; it waits until the viewer disconnects.
+
+This requires the repository to have a `VIEX_UPDATER_PRIVATE_KEY` secret set (see **For contributors** below); without it, Host builds still work, but "Check now" on the **System** page will just say it couldn't check. The Linux `.deb` and macOS builds don't support in-app updates yet — reinstall the newer release manually when one comes out.
 
 ---
 
@@ -245,8 +258,13 @@ cd android && ./gradlew assembleRelease
 Fork the repo and every push to `main` builds and publishes a release in **your** fork — no setup needed.
 
 - **Android signing.** By default the APK is signed with the public *community* keystore in `viewer/signing/` (fine for personal sideloading; anyone can build an APK with the same signature, so don't treat it as proof of origin). To sign with your own key, add these repository secrets: `ANDROID_KEYSTORE_BASE64` (base64 of your `.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
-- **Windows signing.** Not configured (the installer shows a SmartScreen notice). If you own a code-signing certificate, add it to the Tauri build per the [Tauri signing docs](https://v2.tauri.app/distribute/sign/windows/).
-- **Repository links.** Search for `itxahmaddev/viex` and replace it with your own `owner/repo` (README, website, Host About page, Render button).
+- **Host auto-update signing.** The Host's updater checks signatures against the public key baked into `host/src-tauri/tauri.conf.json` (`plugins.updater.pubkey`). To enable auto-updates on your fork, generate your own keypair and point the config at your own public key:
+  ```bash
+  npx tauri signer generate -w ~/.tauri/viex-updater.key
+  ```
+  Then add the **private** key's contents as repository secrets `VIEX_UPDATER_PRIVATE_KEY` (and `VIEX_UPDATER_PRIVATE_KEY_PASSWORD` if you set one), and replace `pubkey` in `tauri.conf.json` with your new public key. Never commit the private key.
+- **Windows / macOS code signing.** Not configured (Windows shows a SmartScreen notice, macOS a Gatekeeper warning). If you own a code-signing certificate, wire it into the `host` job in [`.github/workflows/release.yml`](../.github/workflows/release.yml) per the [Tauri signing docs](https://v2.tauri.app/distribute/sign/windows/) (this is separate from updater signing above).
+- **Repository links.** Search for `itxahmaddev/viex` and replace it with your own `owner/repo` (README, website, Host About page, Render button, and the updater `endpoints` in `tauri.conf.json`).
 
 ---
 

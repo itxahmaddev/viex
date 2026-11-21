@@ -228,14 +228,30 @@ html:not(.is-loading) .hero-title .word {
 }
 
 /* ---------- Background ---------- */
-.glow {
+#scene {
   position: fixed;
-  inset: -20% 0 auto 0;
-  height: 70vh;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 0;
+  display: block;
+}
+.js #scene {
+  opacity: 0;
+  transition: opacity 1.2s var(--ease);
+}
+.js.is-ready #scene {
+  opacity: 1;
+}
+.load-failed #scene {
+  opacity: 1 !important;
+}
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
   pointer-events: none;
-  background: radial-gradient(60% 60% at 50% 0%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%);
-  opacity: 0.55;
+  background: radial-gradient(120% 85% at 50% 30%, transparent 0%, rgb(var(--bg-rgb) / 0.55) 68%, rgb(var(--bg-rgb) / 0.92) 100%);
 }
 .grid-bg {
   position: fixed;
@@ -572,6 +588,180 @@ main,
   fill: var(--fg);
 }
 
+/* Phone demo: loops Watch -> Connecting -> Live on its own, so the hero shows the
+   product working without anyone touching anything. Each state is its own layer,
+   crossfaded on one shared timeline so they never show two at once mid-transition. */
+.phone-state {
+  opacity: 0;
+}
+.devices .tile.soft {
+  fill: color-mix(in srgb, var(--fg) 5%, var(--bg));
+  stroke: var(--line);
+}
+.devices .tile-accent {
+  fill: color-mix(in srgb, var(--accent) 16%, var(--bg));
+  stroke: var(--accent);
+  stroke-opacity: 0.5;
+}
+.devices .watch-play {
+  fill: var(--accent);
+}
+.devices .cap-accent {
+  fill: var(--accent);
+  font-weight: 600;
+}
+.devices .cap-center {
+  text-anchor: middle;
+}
+.devices .pill-dot-muted {
+  fill: var(--muted);
+}
+.devices .spinner-track {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 3;
+}
+.devices .spinner-arc {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 34 104;
+  transform-origin: 625px 256px;
+}
+.devices .tap-ripple {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 0;
+  transform-origin: 625px 246px;
+}
+.devices .link-pulse {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 0.14 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .devices .spinner-arc {
+    animation: spin 0.9s linear infinite;
+  }
+  .devices .link-pulse {
+    animation: linkPulse 1.6s linear infinite;
+  }
+  .devices .watch-btn {
+    transform-origin: 625px 246px;
+    animation: watchPress 9s ease-out infinite;
+  }
+  .devices .tap-ripple {
+    animation: tapRipple 9s ease-out infinite;
+  }
+  .devices .phone-idle {
+    animation: showIdle 9s ease infinite;
+  }
+  .devices .phone-loading {
+    animation: showLoading 9s ease infinite;
+  }
+  .devices .phone-live {
+    animation: showLive 9s ease infinite;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes linkPulse {
+  to {
+    stroke-dashoffset: -1;
+  }
+}
+@keyframes watchPress {
+  0%,
+  54% {
+    transform: scale(1);
+  }
+  57% {
+    transform: scale(0.94);
+  }
+  60%,
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes tapRipple {
+  0%,
+  55% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  57% {
+    opacity: 0.7;
+    transform: scale(0.6);
+  }
+  64% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+@keyframes showIdle {
+  0%,
+  56% {
+    opacity: 1;
+  }
+  62%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes showLoading {
+  0%,
+  56% {
+    opacity: 0;
+  }
+  62%,
+  76% {
+    opacity: 1;
+  }
+  82%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes showLive {
+  0%,
+  76% {
+    opacity: 0;
+  }
+  84%,
+  97% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* Reduced motion: skip the loop entirely and just show the product working. */
+@media (prefers-reduced-motion: reduce) {
+  .devices .phone-live {
+    opacity: 1;
+  }
+  .devices .phone-idle,
+  .devices .phone-loading,
+  .devices .tap-ripple {
+    opacity: 0;
+  }
+  .devices {
+    animation: none;
+  }
+}
+
 /* ---------- Strip ---------- */
 .strip {
   border-block: 1px solid var(--line);
@@ -878,10 +1068,9 @@ main,
   gap: 16px;
   padding: clamp(24px, 5vw, 44px);
   border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
   border-radius: calc(var(--radius) + 6px);
-  background:
-    radial-gradient(80% 120% at 0% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
-    rgb(var(--fg-rgb) / 0.03);
+  background: rgb(var(--fg-rgb) / 0.03);
 }
 .callout p {
   color: var(--fg-2);
