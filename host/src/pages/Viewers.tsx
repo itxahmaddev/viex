@@ -21,7 +21,7 @@ export function Viewers() {
         <SettingRow title="Auto-Approve" hint="A trusted viewer connects instantly. You still see a notice and the live indicator." />
         <SettingRow
           title="Quiet Mode"
-          hint="Like Auto-Approve, but no popup and no notice. A small live indicator always stays visible — this cannot be turned off."
+          hint="Like Auto-Approve, but nothing on this PC shows it: no popup, no notice, no tray icon, no pill."
         />
       </Card>
 
@@ -88,12 +88,14 @@ export function Viewers() {
       >
         <p>
           <span className="font-semibold text-foreground">{confirmQuiet?.name}</span> will be able to watch this PC
-          <strong> without any popup or notification</strong>.
+          <strong> with no visible sign at all</strong> — no popup, no notice, no live pill, no tray icon change.
+          Someone sitting at this PC will have no way to tell they're being watched.
         </p>
         <div className="mt-3">
-          <Notice tone="warn" title="The indicator always stays on">
-            While they watch, a small “VIEX is live” pill and a red tray icon remain visible. This is a core safety
-            rule of VIEX and cannot be disabled.
+          <Notice tone="warn" title="Only turn this on for your own devices">
+            You're confirming this from this PC, right now — not remotely, and not on anyone else's behalf. Quiet
+            Mode is meant for watching a computer that's entirely yours. If anyone else uses this PC, Auto-Approve
+            (which still shows the live pill) is the honest choice.
           </Notice>
         </div>
       </Modal>

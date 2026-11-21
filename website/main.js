@@ -8,9 +8,16 @@
   function ready() {
     root.classList.remove("is-loading");
     root.classList.add("is-ready");
+    if (window.VIEX && typeof window.VIEX.startIntro === "function") window.VIEX.startIntro();
   }
   if (document.readyState === "complete") setTimeout(ready, 450);
   else window.addEventListener("load", function () { setTimeout(ready, 450); });
+
+  // The 3D scene failed to load (no WebGL) — reveal everything immediately instead
+  // of waiting on an opacity transition that will never fire.
+  window.addEventListener("error", function (e) {
+    if (e && e.filename && /scene\.js/.test(e.filename)) root.classList.add("load-failed");
+  });
 
   /* ---- theme toggle ---- */
   var toggle = document.getElementById("themeToggle");
@@ -19,6 +26,7 @@
       var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
       root.setAttribute("data-theme", next);
       try { localStorage.setItem("viex-theme", next); } catch (e) {}
+      if (window.VIEX && typeof window.VIEX.setTheme === "function") window.VIEX.setTheme(next);
     });
   }
 

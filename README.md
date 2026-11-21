@@ -32,10 +32,14 @@ Video flows **peer-to-peer** over WebRTC (DTLS-SRTP encrypted). Your free server
 
 - 🖥️ **Multi-PC** — register as many Hosts as you like; pick one from a live online/offline list.
 - 🪟 **Multi-monitor** — each display is its own video track: view all in a grid, tap one for full screen, swipe between them.
+- 🔍 **Pinch to zoom** — pinch-zoom and pan into any screen on the phone app for a closer look at small text.
+- 📱 **Mini player** — float the screen you're watching in a small window (Picture-in-Picture) while you use other apps.
+- 🧩 **Home-screen widget** (Android) — shows your last-known device list without opening the app.
 - ⚡ **Zero-click Host** — starts hidden with the OS and announces itself online. No manual steps after first-run setup.
 - 🔐 **Password-gated** — `VIEX_PASSWORD` is set on your Relay at deploy time; nobody without it can even see the device list.
-- 🛡️ **Permission modes** — *Ask* (default), *Auto-Approve* (per trusted viewer), *Quiet Mode* (no popup — indicator stays). Stored only on the PC.
+- 🛡️ **Permission modes** — *Ask* (default), *Auto-Approve*, or *Quiet Mode* (opt-in per viewer, no indicator at all — see [Permission modes](#permission-modes)). Stored only on the PC.
 - 🌐 **Configurable STUN/TURN** — public STUN built in; set a TURN relay once on the Relay (Metered / Cloudflare / coturn) for mobile data.
+- 🔄 **Auto-update** — Host checks for and installs updates on its own (Windows/Linux); Viewer offers a one-tap update.
 - 💸 **$0/month** for personal use. 100 % open source (MIT).
 
 ## Quick start (about 10 minutes)
@@ -60,11 +64,11 @@ Every push to `main` runs [`.github/workflows/release.yml`](.github/workflows/re
 
 Versions are `MAJOR.MINOR.<run number>` (e.g. `v0.1.12`). Dependabot keeps npm, Cargo, Actions and Docker dependencies current.
 
-## The one hard line: the live indicator
+## Permission modes
 
-Ask, Auto-Approve and Quiet Mode only change **whether you get a popup**. In *every* mode, while someone is watching, the Host shows a small always-on-top **"VIEX is live"** pill and a red tray icon. It cannot be disabled in this app (a watchdog recreates it if closed).
-
-Without that, a screen viewer becomes a covert surveillance tool — and since this project is open source, the feature would ship to every fork. **Forks are asked to keep the indicator in their default build.** See [`host/src-tauri/src/live.rs`](host/src-tauri/src/live.rs).
+- **Ask** (default) — a popup asks you to Accept or Reject every connection.
+- **Auto-Approve** — a trusted viewer connects instantly. The Host still shows a small always-on-top **"VIEX is live"** pill and a red tray icon while watched (a watchdog recreates the pill if it's closed), and it can't be turned off in this mode.
+- **Quiet Mode** — like Auto-Approve, but with *no* on-screen signal at all: no popup, no pill, no tray change. This is opt-in per viewer, confirmed on the Host PC itself behind a dialog that spells out exactly what it means. It exists for watching a computer that is entirely your own; it is not meant for watching a PC other people also use. See [`host/src-tauri/src/live.rs`](host/src-tauri/src/live.rs) and [`Viewers.tsx`](host/src/pages/Viewers.tsx).
 
 ## Repository layout
 

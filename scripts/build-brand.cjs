@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Regenerates the transparent light/dark logo variants and every app icon from the source art in /LOGO.
+ * Regenerates the transparent light/dark logo variants and every app icon from the source
+ * art in brand/source/ (see docs/BRANDING.md for how those crops are produced).
  *
  *   npm i --no-save sharp   # (not a project dependency)
  *   node scripts/build-brand.cjs
@@ -14,9 +15,8 @@ const path = require("node:path");
 
 const root = path.join(__dirname, "..");
 const SRC = {
-  wordmark: path.join(root, "LOGO", "VIEX Blue Ribbon Logo - Copy.png"),
-  mark: path.join(root, "LOGO", "VIEX Blue Ribbon Logo - Copy - Copy.png"),
-  logo: path.join(root, "LOGO", "VIEX Blue Ribbon Logo.png"),
+  mark: path.join(root, "brand", "source", "viex-mark-crop.png"),
+  logo: path.join(root, "brand", "source", "viex-logo-crop.png"),
 };
 const OUT = path.join(root, "brand");
 const INK_DARK = [239, 240, 242]; // text color used on dark backgrounds (matches --dark-color-text)

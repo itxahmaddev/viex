@@ -40,11 +40,24 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300..800&family=Geist+Mono:wght@400..600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js" crossorigin />
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/environments/RoomEnvironment.js" crossorigin />
+    <link rel="modulepreload" href="scene.js" />
   </head>
   <body>
     <!-- LOADER -->
@@ -57,7 +70,8 @@
     </div>
 
     <a class="skip" href="#main">Skip to content</a>
-    <div class="glow" aria-hidden="true"></div>
+    <canvas id="scene" aria-hidden="true"></canvas>
+    <div class="veil" aria-hidden="true"></div>
     <div class="grid-bg" aria-hidden="true"></div>
     <div class="grain" aria-hidden="true"></div>
 
@@ -95,14 +109,15 @@
       <section class="hero" id="top">
         <div class="wrap hero-grid">
           <div class="hero-copy">
-            <span class="eyebrow reveal"><i class="live-dot"></i> Open source · View-only · $0/month</span>
+            <span class="eyebrow reveal"><i class="live-dot"></i> 100% yours · View-only · $0/month forever</span>
             <h1 class="hero-title">
               <span class="line"><span class="word">Watch</span> <span class="word">your</span> <span class="word">PC.</span></span>
               <span class="line"><span class="word muted">From</span> <span class="word muted">anywhere.</span></span>
             </h1>
             <p class="lede reveal">
-              VIEX is a free, self-hosted remote screen <strong>viewer</strong>. Install the Host on your computers, deploy a tiny
-              relay for free, and watch every monitor live from your phone or laptop — peer-to-peer and encrypted.
+              VIEX is a free, self-hosted remote screen <strong>viewer</strong> — nothing more. No mouse, no keyboard, no cloud
+              in the middle: install the Host on your computers, deploy a tiny relay for free, and watch every monitor live
+              from your phone or laptop, peer-to-peer and encrypted end to end.
             </p>
             <div class="cta reveal">
               <a class="btn btn-solid btn-lg" id="ctaWindows" href="https://github.com/itxahmaddev/viex/releases/latest/download/VIEX-Host-Setup.exe">
@@ -136,34 +151,64 @@
                 <rect x="240" y="196" width="226" height="110" rx="10" class="bar soft" />
                 <path d="M6 388h518l-26 28H32z" class="stroke" />
               </g>
-              <!-- link -->
+              <!-- link: brightens + pulses once the demo "connects" -->
               <path class="link" d="M500 230 C 560 230, 540 300, 590 300" />
+              <path class="link link-pulse" d="M500 230 C 560 230, 540 300, 590 300" pathLength="1" />
               <text x="520" y="214" class="p2p">P2P · DTLS-SRTP</text>
-              <!-- phone -->
+              <!-- phone: loops Watch -> Connecting -> Live, on its own (no input needed) -->
               <g class="dev-phone">
                 <rect x="520" y="86" width="210" height="400" rx="34" class="stroke phone-body" />
                 <rect x="534" y="100" width="182" height="372" rx="24" class="phone-screen" />
                 <rect x="610" y="108" width="30" height="6" rx="3" class="bar" />
-                <g>
-                  <rect x="546" y="136" width="158" height="104" rx="10" class="tile" />
-                  <rect x="558" y="150" width="70" height="7" rx="3.5" class="bar" />
-                  <rect x="558" y="166" width="120" height="5" rx="2.5" class="bar soft" />
-                  <rect x="558" y="196" width="60" height="32" rx="6" class="bar soft" />
-                  <rect x="626" y="196" width="68" height="32" rx="6" class="bar soft" />
-                  <text x="556" y="254" class="cap">Monitor 1</text>
+
+                <!-- state 1: device list, finger about to tap Watch -->
+                <g class="phone-state phone-idle">
+                  <rect x="546" y="122" width="158" height="40" rx="10" class="tile soft" />
+                  <circle cx="562" cy="142" r="4" class="pill-dot pill-dot-muted" />
+                  <text x="574" y="146" class="cap">Living Room PC</text>
+                  <rect x="546" y="170" width="158" height="40" rx="10" class="tile soft" />
+                  <circle cx="562" cy="190" r="4" class="pill-dot pill-dot-muted" />
+                  <text x="574" y="194" class="cap">Workstation</text>
+                  <g class="watch-btn">
+                    <rect x="546" y="226" width="158" height="40" rx="10" class="tile tile-accent" />
+                    <path d="M612 238v16l13-8z" class="watch-play" />
+                    <text x="634" y="250" class="cap cap-accent">Watch</text>
+                  </g>
                 </g>
-                <g>
-                  <rect x="546" y="268" width="158" height="104" rx="10" class="tile" />
-                  <rect x="558" y="282" width="90" height="7" rx="3.5" class="bar" />
-                  <rect x="558" y="298" width="100" height="5" rx="2.5" class="bar soft" />
-                  <rect x="558" y="318" width="136" height="42" rx="6" class="bar soft" />
-                  <text x="556" y="386" class="cap">Monitor 2</text>
+
+                <!-- state 2: connecting -->
+                <g class="phone-state phone-loading">
+                  <circle cx="625" cy="256" r="22" class="spinner-track" />
+                  <circle cx="625" cy="256" r="22" class="spinner-arc" />
+                  <text x="625" y="300" class="cap cap-center">Connecting…</text>
                 </g>
-                <g class="live-pill">
-                  <rect x="546" y="412" width="98" height="30" rx="15" class="pill" />
-                  <circle cx="564" cy="427" r="5" class="pill-dot" />
-                  <text x="576" y="431" class="pill-text">LIVE · view-only</text>
+
+                <!-- state 3: live — the laptop's screens, mirrored on the phone -->
+                <g class="phone-state phone-live">
+                  <g>
+                    <rect x="546" y="136" width="158" height="104" rx="10" class="tile" />
+                    <rect x="558" y="150" width="70" height="7" rx="3.5" class="bar" />
+                    <rect x="558" y="166" width="120" height="5" rx="2.5" class="bar soft" />
+                    <rect x="558" y="196" width="60" height="32" rx="6" class="bar soft" />
+                    <rect x="626" y="196" width="68" height="32" rx="6" class="bar soft" />
+                    <text x="556" y="254" class="cap">Monitor 1</text>
+                  </g>
+                  <g>
+                    <rect x="546" y="268" width="158" height="104" rx="10" class="tile" />
+                    <rect x="558" y="282" width="90" height="7" rx="3.5" class="bar" />
+                    <rect x="558" y="298" width="100" height="5" rx="2.5" class="bar soft" />
+                    <rect x="558" y="318" width="136" height="42" rx="6" class="bar soft" />
+                    <text x="556" y="386" class="cap">Monitor 2</text>
+                  </g>
+                  <g class="live-pill">
+                    <rect x="546" y="412" width="98" height="30" rx="15" class="pill" />
+                    <circle cx="564" cy="427" r="5" class="pill-dot" />
+                    <text x="576" y="431" class="pill-text">LIVE · view-only</text>
+                  </g>
                 </g>
+
+                <!-- the "tap" -->
+                <circle class="tap-ripple" cx="625" cy="246" r="4" />
               </g>
             </svg>
           </div>
@@ -312,13 +357,13 @@ VIEX_ICE_SERVERS=[{"urls":"turn:turn.example.com:3478","username":"u","credentia
       <section class="section" id="principle">
         <div class="wrap narrow">
           <div class="callout reveal">
-            <span class="eyebrow">The one hard line</span>
-            <h2>A live session is never invisible.</h2>
+            <span class="eyebrow">Permission modes</span>
+            <h2>Ask by default. Silent only if you say so, on that PC.</h2>
             <p>
-              Ask, Auto-Approve and Quiet Mode only change <em>whether you get a popup</em>. In every mode, while someone is watching, the
-              Host shows a small always-on-top “VIEX is live” indicator and a red tray icon — and it can't be switched off. Without that,
-              a screen viewer becomes a covert surveillance tool; with it, VIEX stays a tool for watching your own computers. Forks are
-              asked to keep it that way.
+              In Ask and Auto-Approve mode, a small always-on-top “VIEX is live” indicator and a red tray icon show on the Host while
+              anyone is watching — it can't be switched off in those two modes. Quiet Mode removes that signal entirely, but only after
+              you confirm it yourself, on that PC, for a specific viewer. It's built for watching a computer that's entirely your own —
+              not one other people use.
             </p>
           </div>
         </div>
@@ -359,5 +404,6 @@ VIEX_ICE_SERVERS=[{"urls":"turn:turn.example.com:3478","username":"u","credentia
     </footer>
 
     <script src="main.js" defer></script>
+    <script type="module" src="scene.js"></script>
   </body>
 </html>

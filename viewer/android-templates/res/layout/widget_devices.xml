@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#CC101215"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_title"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="6dp" />
+
+    <TextView
+        android:id="@+id/widget_empty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_empty"
+        android:textColor="#9A9FAE"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <LinearLayout android:id="@+id/widget_row1" style="@style/WidgetRow">
+        <ImageView android:id="@+id/widget_row1_dot" style="@style/WidgetDot" />
+        <TextView android:id="@+id/widget_row1_name" style="@style/WidgetRowText" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/widget_row2" style="@style/WidgetRow">
+        <ImageView android:id="@+id/widget_row2_dot" style="@style/WidgetDot" />
+        <TextView android:id="@+id/widget_row2_name" style="@style/WidgetRowText" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/widget_row3" style="@style/WidgetRow">
+        <ImageView android:id="@+id/widget_row3_dot" style="@style/WidgetDot" />
+        <TextView android:id="@+id/widget_row3_name" style="@style/WidgetRowText" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/widget_row4" style="@style/WidgetRow">
+        <ImageView android:id="@+id/widget_row4_dot" style="@style/WidgetDot" />
+        <TextView android:id="@+id/widget_row4_name" style="@style/WidgetRowText" />
+    </LinearLayout>
+</LinearLayout>
